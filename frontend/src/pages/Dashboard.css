@@ -1,0 +1,24 @@
+.droppable-zone {
+  transition: background 0.2s;
+}
+.droppable-zone.dragging-over {
+  background: #e3f2fd;
+  border-radius: 12px;
+}
+.droppable-zone.archived-droppable {
+  background: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.draggable-item {
+  transition: box-shadow 0.2s, background 0.2s;
+}
+.draggable-item.dragging {
+  box-shadow: 0 4px 16px 0 rgba(33, 150, 243, 0.18), 0 1.5px 6px 0 rgba(33, 150, 243, 0.12);
+  background: #e3f2fd;
+  border-radius: 12px;
+}
+.draggable-item.archived-draggable {
+  cursor: not-allowed;
+  opacity: 0.7;
+} 
