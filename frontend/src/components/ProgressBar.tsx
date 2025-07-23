@@ -1,5 +1,6 @@
 
 import { LinearProgress, linearProgressClasses, styled } from '@mui/material';
+import React from 'react';
 
 function getColor(value: number) {
   if (value < 40) return '#ef5350'; // красный
@@ -20,6 +21,12 @@ const StyledLinearProgress = styled(LinearProgress)<{ barcolor: string }>(
   })
 );
 
-export default function ProgressBar({ value }: { value: number }) {
+interface ProgressBarProps {
+  value: number;
+}
+
+const ProgressBar: React.FC<ProgressBarProps> = React.memo(({ value }) => {
   return <StyledLinearProgress variant="determinate" value={value} barcolor={getColor(value)} />;
-} 
+});
+
+export default ProgressBar; 

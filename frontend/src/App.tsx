@@ -5,8 +5,8 @@ import Register from './pages/Register';
 import PrivateRoute from './components/PrivateRoute';
 import AuthRedirect from './components/AuthRedirect';
 import Dashboard from './pages/Dashboard';
-// import Users from './pages/Users'; // если есть
-// import Profile from './pages/Profile'; // если есть
+import Profile from './pages/Profile';
+import Users from './pages/Users';
 
 export default function App() {
   return (
@@ -17,8 +17,8 @@ export default function App() {
         <Route element={<PrivateRoute />}>
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
-            {/* <Route path="users" element={<Users />} /> */}
-            {/* <Route path="profile" element={<Profile />} /> */}
+            <Route path="users" element={<Users />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" />} />

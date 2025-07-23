@@ -400,6 +400,18 @@ router.post('/goal/:goalId/keyresult/:krId/duplicate', requireAuth, async (req: 
   res.status(201).json(newKR);
 });
 
+// Обновить комментарий KR
+router.patch('/goal/:goalId/keyresult/:krId/comment', requireAuth, async (req: AuthRequest, res) => {
+  const { goalId, krId } = req.params;
+  const { comment } = req.body;
+  const kr = await prisma.keyResult.findUnique({ where: { id: krId }, include: { goal: { include: { okr: true } } } });
+  if (!kr || kr.goalId !== goalId || kr.goal.okr.userId !== req.user!.userId || kr.goal.okr.archived) {
+    return res.status(403).json({ error: 'Нет доступа или OKR в архиве' });
+  }
+  const updated = await prisma.keyResult.update({ where: { id: krId }, data: { comment } });
+  res.json(updated);
+});
+
 // Смена порядка целей внутри OKR
 router.post('/:id/reorder-goals', requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params;

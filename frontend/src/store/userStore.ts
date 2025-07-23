@@ -36,8 +36,24 @@ export const useUserStore = create<UserStore>((set) => ({
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
   },
-  setUser: (user: User | null) => set((state) => ({ ...state, user })),
+  setUser: (user: User | null) => {
+    set((state) => ({ ...state, user }));
+    if (user) localStorage.setItem('user', JSON.stringify(user));
+    else localStorage.removeItem('user');
+  },
 }));
+
+// Генерация аватарки: первые буквы имени и фамилии + цвет, зависящий от id/email
+export function getUserAvatar(firstName: string, lastName: string, idOrEmail?: string) {
+  const initials = `${(firstName?.[0] || '').toUpperCase()}${(lastName?.[0] || '').toUpperCase()}`;
+  // Цвет выбирается детерминированно по id/email
+  const colors = ['#FFB300', '#1E88E5', '#43A047', '#E53935', '#8E24AA', '#F4511E', '#2563eb', '#f59e42'];
+  let hash = 0;
+  const str = idOrEmail || firstName + lastName;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const color = colors[Math.abs(hash) % colors.length];
+  return { initials, color };
+}
 
 // Инициализация из localStorage при старте
 const token = localStorage.getItem('token');

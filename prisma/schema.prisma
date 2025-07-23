@@ -59,6 +59,7 @@ model KeyResult {
   formula           String
   order             Int                    @default(0)
   weeklyMonitoring  WeeklyMonitoringEntry[]
+  comment           String?                // комментарий к KR
 }
 
 model WeeklyMonitoringEntry {
