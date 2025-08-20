@@ -34,6 +34,8 @@ model OKR {
   userId    String
   period    String   // Например: "2024-Q1", "2025"
   archived  Boolean  @default(false)
+  startDate String?
+  endDate   String?
   order     Int      @default(0)
   goals     Goal[]
 }

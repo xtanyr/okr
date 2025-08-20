@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewOKR - Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.css" />
+    <link rel="stylesheet" href="theme_coffee_okr.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background);
+            color: var(--foreground);
+        }
+        .coffee-icon {
+            animation: wobble 1200ms infinite;
+        }
+        @keyframes wobble {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-3px) rotate(-1deg); }
+            75% { transform: translateY(3px) rotate(1deg); }
+        }
+        .form-group {
+            opacity: 0;
+            transform: translateY(-15px);
+            animation: fadeInUp 350ms ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-card rounded-lg shadow-lg overflow-hidden">
+        <div class="p-8 space-y-6">
+            <!-- Logo -->
+            <div class="flex justify-center">
+                <div class="coffee-icon">
+                    <svg class="w-12 h-12 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="6" cy="8" r="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="6" cy="16" r="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Welcome Text -->
+            <div class="text-center">
+                <h1 class="text-2xl font-bold">Welcome Back</h1>
+                <p class="text-muted-foreground">Sign in to your BrewOKR account</p>
+            </div>
+
+            <!-- Form -->
+            <form class="space-y-4">
+                <!-- Email Input -->
+                <div class="form-group" style="animation-delay: 100ms">
+                    <label for="email" class="block text-sm font-medium mb-1">Email Address</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <input type="email" id="email" class="block w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200" placeholder="you@example.com">
+                    </div>
+                </div>
+
+                <!-- Password Input -->
+                <div class="form-group" style="animation-delay: 200ms">
+                    <label for="password" class="block text-sm font-medium mb-1">Password</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <input type="password" id="password" class="block w-full pl-10 pr-3 py-2 border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <!-- Remember Me & Forgot -->
+                <div class="form-group flex items-center justify-between">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="h-4 w-4 rounded border-input text-primary focus:ring-ring">
+                        <span class="ml-2 text-sm">Remember me</span>
+                    </label>
+                    <a href="#" class="text-sm text-primary hover:text-primary/80 transition-colors">Forgot password?</a>
+                </div>
+
+                <!-- Sign In Button -->
+                <div class="form-group">
+                    <button type="submit" class="w-full py-2 px-4 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-all duration-200 transform hover:scale-[1.03] active:scale-[0.97] active:rotate-1 active:-translate-y-px">
+                        Sign In
+                    </button>
+                </div>
+            </form>
+
+            <!-- Sign Up Link -->
+            <div class="text-center">
+                <p class="text-sm">New to BrewOKR? <a href="#" class="text-primary hover:text-primary/80 transition-colors">Sign up</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flowbite@2.0.0/dist/flowbite.min.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Coffee icon wobble animation
+        const coffeeIcon = document.querySelector('.coffee-icon');
+        if (coffeeIcon) {
+            let angle = 0;
+            setInterval(() => {
+                angle = (angle + 0.5) % 360;
+                coffeeIcon.style.transform = `rotate(${Math.sin(angle * Math.PI / 180) * 1}deg)`;
+            }, 50);
+        }
+    </script>
+</body>
+</html>

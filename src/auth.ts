@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 const router = Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
+const REGISTRATION_CODE = process.env.REGISTRATION_CODE || 'okr2025';
 
 // Генерация аватарки: первые две буквы имени + случайный фон (цвет)
 function generateAvatar(name: string) {
@@ -18,9 +19,12 @@ function generateAvatar(name: string) {
 
 // Регистрация
 router.post('/register', async (req, res) => {
-  const { email, password, passwordConfirm, firstName, lastName } = req.body;
-  if (!email || !password || !passwordConfirm || !firstName || !lastName) {
+  const { email, password, passwordConfirm, firstName, lastName, codeWord } = req.body;
+  if (!email || !password || !passwordConfirm || !firstName || !lastName || !codeWord) {
     return res.status(400).json({ error: 'Все поля обязательны' });
+  }
+  if (codeWord !== REGISTRATION_CODE) {
+    return res.status(400).json({ error: 'Неверное кодовое слово для регистрации' });
   }
   if (password !== passwordConfirm) {
     return res.status(400).json({ error: 'Пароли не совпадают' });

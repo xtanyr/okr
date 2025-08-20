@@ -1,0 +1,33 @@
+﻿import { useCallback, useEffect, useState } from 'react';
+import { Box, Typography, Grid, Card, CardContent, Stack, Button, Chip, CircularProgress, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tabs, Tab } from '@mui/material';
+import GoalItem from '../components/GoalItem';
+import axios from 'axios';
+import OkrHeader from '../components/OkrHeader';
+import { useUserStore } from '../store/userStore';
+import styles from './Dashboard.module.css';
+import type { KeyResult } from '../types';
+
+interface Goal {
+  id: string;
+  title: string;
+  keyResults: KeyResult[];
+  order?: number;
+}
+
+interface OKR {
+  id: string;
+  period: string;
+  archived: boolean;
+  goals: Goal[];
+  userId: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+const Dashboard = () => {
+  const [okrs, setOkrs] = useState<OKR[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [newPeriod, setNewPeriod] = useState('');
+  cons

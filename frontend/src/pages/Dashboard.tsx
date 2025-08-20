@@ -1,20 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Box, Typography, Grid, Card, CardContent, Stack, Button, Chip, useMediaQuery, useTheme, CircularProgress, Divider, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import GoalItem from '../components/GoalItem';
+import { useCallback, useEffect, useState } from 'react';
+import { Box, Grid, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 import axios from 'axios';
+import OkrHeader from '../components/OkrHeader';
+import EmptyState from '../components/dashboard/EmptyState';
+import OkrTabs from '../components/dashboard/OkrTabs';
+import OkrDetails from '../components/dashboard/OkrDetails';
+import { useUserStore } from '../store/userStore';
 
-interface KeyResult {
-  id: string;
-  title: string;
-  metric: string;
-  base: number;
-  plan: number;
-  formula: string;
-  fact: number;
-  order: number | undefined;
-  weeklyMonitoring?: { weekNumber: number; value: number }[];
-}
+import type { KeyResult } from '../types';
 
 interface Goal {
   id: string;
@@ -28,54 +21,527 @@ interface OKR {
   period: string;
   archived: boolean;
   goals: Goal[];
+  userId: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 const Dashboard = () => {
   const [okrs, setOkrs] = useState<OKR[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newPeriod, setNewPeriod] = useState('');
   const [creating, setCreating] = useState(false);
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [showWeeklyMonitoring, setShowWeeklyMonitoring] = useState(() => {
+    // Загружаем сохраненное состояние недельного мониторинга
+    const saved = localStorage.getItem('showWeeklyMonitoring');
+    return saved ? JSON.parse(saved) : true;
+  });
+  const currentUser = useUserStore(s => s.user);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  
+  // Определяем, смотрит ли пользователь свои OKR или OKR других пользователей
+  const isViewingOwnOkrs = currentUser && selectedUserId === currentUser.id;
+  const [selectedOkrId, setSelectedOkrId] = useState<string>(() => {
+    // Загружаем сохраненный OKR ID из localStorage
+    const saved = localStorage.getItem('selectedOkrId');
+    return saved || '';
+  });
+  // Removed unused state variables for lastViewedOkrPeriod
+  
+  const [lastSelectedOkrIds, setLastSelectedOkrIds] = useState<{active: string | null, archive: string | null}>({
+    active: null,
+    archive: null
+  });
+  const [showArchived, setShowArchived] = useState(false);
+  const handleTabsChange = useCallback((newShowArchived: boolean) => {
+    setShowArchived(newShowArchived);
 
-  useEffect(() => {
-    axios.get('/okr').then(res => {
-      setOkrs(res.data);
-      setLoading(false);
-      // Устанавливаем период по умолчанию (последний)
-      if (res.data.length > 0 && !selectedPeriod) {
-        setSelectedPeriod(res.data[res.data.length - 1].period);
+    // Сохраняем текущий выбранный OKR для текущего предс��авления
+    if (selectedOkrId) {
+      setLastSelectedOkrIds(prev => ({
+        ...prev,
+        [showArchived ? 'archive' : 'active']: selectedOkrId
+      }));
+    }
+
+    // Восстанавливаем последний выбранный OKR для нового представления
+    const viewToShow = newShowArchived ? 'archive' : 'active';
+    const lastSelectedId = lastSelectedOkrIds[viewToShow];
+
+    if (lastSelectedId) {
+      // Проверяем, что OKR все еще существует и в правильном представлении
+      const okrToSelect = okrs.find(okr => okr.id === lastSelectedId);
+      if (okrToSelect && (newShowArchived ? okrToSelect.archived : !okrToSelect.archived)) {
+        updateSelectedOkrId(lastSelectedId);
+        return;
+      }
+    }
+
+    // Если не нашли сохраненный выбор, сбрасываем на первый доступный OKR
+    const currentViewOkrs = newShowArchived 
+      ? okrs.filter(okr => okr.archived)
+      : okrs.filter(okr => !okr.archived);
+
+    if (currentViewOkrs.length > 0) {
+      updateSelectedOkrId(currentViewOkrs[0].id);
+    } else {
+      updateSelectedOkrId('');
+    }
+  }, [selectedOkrId, showArchived, lastSelectedOkrIds, okrs]);
+  
+  // Calculate overall OKR progress (0-100%) as average of goal progresses
+  const calculateOverallProgress = useCallback((okr: OKR | undefined): number => {
+    if (!okr?.goals?.length) return 0;
+    
+    const goalProgresses: number[] = [];
+    const debugInfo: {goal: string, progress: number, keyResults: Array<{title: string, progress: number}>}[] = [];
+    
+    // Calculate progress for each goal
+    okr.goals.forEach(goal => {
+      if (!goal.keyResults?.length) return;
+      
+      let goalTotalProgress = 0;
+      let validKeyResults = 0;
+      const keyResultsDebug: Array<{title: string, progress: number}> = [];
+      
+      // Calculate average progress for this goal's key results
+      goal.keyResults.forEach(kr => {
+        // Skip if plan is 0 to avoid division by zero
+        if (kr.plan === 0) return;
+        
+        // Calculate progress for this key result (0-100%)
+        let progress = (kr.fact / kr.plan) * 100;
+        progress = Math.min(progress, 100); // Cap at 100%
+        progress = Math.max(0, progress);   // Ensure not negative
+        
+        if (isFinite(progress)) {
+          keyResultsDebug.push({
+            title: kr.title,
+            progress: progress
+          });
+          goalTotalProgress += progress;
+          validKeyResults++;
+        }
+      });
+      
+      // Calculate average progress for this goal
+      if (validKeyResults > 0) {
+        const goalProgress = goalTotalProgress / validKeyResults;
+        goalProgresses.push(goalProgress);
+        
+        debugInfo.push({
+          goal: goal.title,
+          progress: goalProgress,
+          keyResults: keyResultsDebug
+        });
       }
     });
+    
+    // Calculate overall progress as average of goal progresses
+    const totalProgress = goalProgresses.reduce((sum, p) => sum + p, 0);
+    const overallProgress = goalProgresses.length > 0 ? totalProgress / goalProgresses.length : 0;
+    const finalProgress = Math.min(Math.max(0, Math.round(overallProgress)), 100);
+    
+    // Debug log
+    console.debug('OKR Progress calculation:', {
+      goalProgresses,
+      totalProgress,
+      overallProgress,
+      finalProgress,
+      goals: debugInfo
+    });
+    
+    return finalProgress;
   }, []);
+  
+  // Overall progress is calculated after selectedOkr is defined
+  // Track last selected OKR ID for active and archive views
+  
+  // Функция для обновления selectedOkrId с сохранением в localStorage
+  const updateSelectedOkrId = (okrId: string) => {
+    if (okrId === selectedOkrId) return; // Skip if no change
+    
+    setSelectedOkrId(okrId);
+    
+    // Обновляем последний выбранный OKR для текущего представления (активное/архив)
+    setLastSelectedOkrIds(prev => ({
+      ...prev,
+      [showArchived ? 'archive' : 'active']: okrId
+    }));
+    
+    // Сохраняем выбранный OKR ID для текущего пользователя
+    if (selectedUserId) {
+      const userOkrKey = `selectedOkrId_${selectedUserId}`;
+      localStorage.setItem(userOkrKey, okrId);
+      
+      // Сохраняем информацию о последнем просмотренном периоде
+      const selectedOkr = okrs.find(o => o.id === okrId);
+      if (selectedOkr) {
+        localStorage.setItem(`lastViewedOkrPeriod_${selectedUserId}`, selectedOkr.period);
+      }
+    }
+  };
 
-  const periods = Array.from(new Set(okrs.map(okr => okr.period)));
-  const filteredOkrs = okrs.filter(okr => okr.period === selectedPeriod);
+  // Функция для обновления showWeeklyMonitoring с сохранением в localStorage
+  const updateShowWeeklyMonitoring = (show: boolean) => {
+    setShowWeeklyMonitoring(show);
+    localStorage.setItem('showWeeklyMonitoring', JSON.stringify(show));
+  };
 
+  // Создание нового OKR
   const handleCreateOKR = async () => {
-    if (!newPeriod) return;
+    if (!newPeriod.trim()) return;
     setCreating(true);
     try {
-      await axios.post('/okr', { period: newPeriod });
-      const res = await axios.get('/okr');
-      setOkrs(res.data);
-      setAddDialogOpen(false);
+      const res = await axios.post('/okr', { period: newPeriod });
       setNewPeriod('');
-      setSelectedPeriod(newPeriod);
+      setAddDialogOpen(false);
+      reloadOkrs();
+      // Выбираем только что созданный OKR и переключаемся на активные OKR
+      if (res.data?.id) {
+        updateSelectedOkrId(res.data.id);
+        setShowArchived(false);
+      }
+    } catch (error) {
+      console.error('Ошибка при создании OKR:', error);
+      alert('Не удалось создать OKR. Пожалуйста, попробуйте снова.');
     } finally {
       setCreating(false);
     }
   };
 
+  // Загружаем OKR выбранного пользователя
+  useEffect(() => {
+    if (!selectedUserId) return;
+    setLoading(true);
+    
+    const loadUserOkrs = async () => {
+      try {
+        const response = await axios.get(`/okr/user/${selectedUserId}`);
+        const userOkrs = response.data;
+        setOkrs(userOkrs);
+        
+        if (userOkrs.length === 0) {
+          setSelectedOkrId('');
+          setLoading(false);
+          return;
+        }
+        
+        // Восстанавливаем последние выбранные OKR для активных и архивных
+        const userOkrKey = `selectedOkrId_${selectedUserId}`;
+        const savedOkrId = localStorage.getItem(userOkrKey);
+        
+        // Инициализируем lastSelectedOkrIds на основе сохраненных данных
+        const activeOkrs = userOkrs.filter((okr: OKR) => !okr.archived);
+        const archivedOkrs = userOkrs.filter((okr: OKR) => okr.archived);
+        
+        const newLastSelectedIds = {
+          active: activeOkrs.length > 0 ? activeOkrs[0].id : null,
+          archive: archivedOkrs.length > 0 ? archivedOkrs[0].id : null
+        };
+        
+        // Восстанавливаем из localStorage, если есть
+        if (savedOkrId) {
+          const savedOkr = userOkrs.find((okr: OKR) => okr.id === savedOkrId);
+          if (savedOkr) {
+            const viewType = savedOkr.archived ? 'archive' : 'active';
+            newLastSelectedIds[viewType] = savedOkrId;
+            setSelectedOkrId(savedOkrId);
+            setLastSelectedOkrIds(newLastSelectedIds);
+            return;
+          }
+        }
+        
+        // Если не нашли по ID, пробуем по последнему просмотренному периоду
+        const lastViewedPeriod = localStorage.getItem(`lastViewedOkrPeriod_${selectedUserId}`);
+        if (lastViewedPeriod) {
+          const lastViewedOkr = userOkrs.find((okr: OKR) => okr.period === lastViewedPeriod);
+          if (lastViewedOkr) {
+            const viewType = lastViewedOkr.archived ? 'archive' : 'active';
+            newLastSelectedIds[viewType] = lastViewedOkr.id;
+            setSelectedOkrId(lastViewedOkr.id);
+            setLastSelectedOkrIds(newLastSelectedIds);
+            return;
+          }
+        }
+        
+        // Устанавливаем первый доступный OKR для текущего представления
+        const currentViewOkrs = showArchived ? archivedOkrs : activeOkrs;
+        if (currentViewOkrs.length > 0) {
+          setSelectedOkrId(currentViewOkrs[0].id);
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке OKR пользователя:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadUserOkrs();
+  }, [selectedUserId]);
+
+  // Загрузка пользователей
+  useEffect(() => {
+    axios.get('/user/all').then(res => {
+      setUsers(res.data.map((u: any) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` })));
+      if (currentUser && !selectedUserId) setSelectedUserId(currentUser.id);
+    });
+  }, [currentUser]);
+
+  // OKR для выбранного пользователя
+  const userOkrs = okrs.filter(okr => !selectedUserId || okr.userId === selectedUserId);
+  const activeOkrs = userOkrs.filter(okr => !okr.archived);
+  const archivedOkrs = userOkrs.filter(okr => okr.archived);
+  
+  // Показываем активные или архивные OKR в зависимости от выбранной вкладки
+  const displayedOkrs = showArchived ? archivedOkrs : activeOkrs;
+  const selectedOkr = userOkrs.find(o => o.id === selectedOkrId);
+  const overallProgress = selectedOkr ? calculateOverallProgress(selectedOkr) : 0;
+  
+  
+  const reloadOkrs = useCallback(async () => {
+    if (!selectedUserId) return;
+    
+    // Skip if we're already loading
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      const response = await axios.get(`/okr/user/${selectedUserId}`);
+      const newOkrs = response.data;
+      
+      // Check if OKRs have actually changed to prevent unnecessary updates
+      const okrsChanged = JSON.stringify(newOkrs) !== JSON.stringify(okrs);
+      
+      if (okrsChanged) {
+        setOkrs(newOkrs);
+      }
+      
+      // If there are no OKRs, reset the selection
+      if (newOkrs.length === 0) {
+        if (selectedOkrId !== '') {
+          updateSelectedOkrId('');
+        }
+        return;
+      }
+      
+      // Обновляем lastSelectedOkrIds с учетом новых данных
+      const activeOkrs = newOkrs.filter((okr: OKR) => !okr.archived);
+      const archivedOkrs = newOkrs.filter((okr: OKR) => okr.archived);
+      
+      setLastSelectedOkrIds(prev => {
+        const updated = {...prev};
+        
+        // Проверяем, существуют ли сохраненные ID в новых данных
+        if (prev.active && !activeOkrs.some((okr: OKR) => okr.id === prev.active)) {
+          updated.active = activeOkrs.length > 0 ? activeOkrs[0].id : null;
+        }
+        
+        if (prev.archive && !archivedOkrs.some((okr: OKR) => okr.id === prev.archive)) {
+          updated.archive = archivedOkrs.length > 0 ? archivedOkrs[0].id : null;
+        }
+        
+        return updated;
+      });
+      
+      // Если текущий выбранный OKR существует и в правильном представлении, оставляем его
+      const currentOkr = newOkrs.find((okr: OKR) => okr.id === selectedOkrId);
+      if (currentOkr) {
+        const okrInCurrentView = showArchived ? currentOkr.archived : !currentOkr.archived;
+        if (okrInCurrentView) {
+          return; // Нет необходимости менять выбор
+        }
+      }
+      
+      // Пытаемся восстановить последний выбранный OKR для текущего представления
+      const lastSelectedId = showArchived ? lastSelectedOkrIds.archive : lastSelectedOkrIds.active;
+      if (lastSelectedId) {
+        const lastSelectedOkr = newOkrs.find((okr: OKR) => okr.id === lastSelectedId);
+        if (lastSelectedOkr && (showArchived ? lastSelectedOkr.archived : !lastSelectedOkr.archived)) {
+          updateSelectedOkrId(lastSelectedId);
+          return;
+        }
+      }
+      
+      // Если не нашли сохраненный выбор, выбираем первый доступный OKR в текущем представлении
+      const currentViewOkrs = showArchived ? archivedOkrs : activeOkrs;
+      if (currentViewOkrs.length > 0) {
+        updateSelectedOkrId(currentViewOkrs[0].id);
+      } else {
+        updateSelectedOkrId('');
+      }
+    } catch (error) {
+      console.error('Ошибка при загрузке OKR:', error);
+      // Only show error if we're not in the middle of a page load
+      if (okrs.length === 0) {
+        alert('Не удалось загрузить OKR. Пожалуйста, проверьте соединение и обновите страницу.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedUserId, showArchived, loading, okrs, selectedOkrId]);
+
+  // Удаляем этот эффект, так как он может вызывать лишние обновления
+  // и конфликтовать с другим эффектом, который обрабатывает выбор OKR
+
+
+
   // Обновление цели (goal) в состоянии OKR
   const handleGoalChange = (okrId: string, updatedGoal: Goal) => {
-    setOkrs(prevOkrs => prevOkrs.map(okr =>
-      okr.id === okrId
-        ? { ...okr, goals: okr.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g) }
-        : okr
-    ));
+    setOkrs(prev => 
+      prev.map(okr => 
+        okr.id === okrId 
+          ? { 
+              ...okr, 
+              goals: okr.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g) 
+            } 
+          : okr
+      )
+    );
+  };
+
+  // Заглушки для обязательных пропсов GoalItem
+    const handleDeleteGoal = async (goalId: string) => {
+    const selectedOkr = okrs.find(okr => okr.id === selectedOkrId);
+    if (selectedOkr?.archived) {
+      alert('Нельзя удалять цели из архивного OKR');
+      return;
+    }
+    if (!window.confirm('Вы уверены, что хотите удалить эту цель и все её ключевые результаты?')) return;
+    try {
+      await axios.delete(`/okr/${selectedOkrId}/goal/${goalId}`);
+      reloadOkrs();
+    } catch (error) {
+      console.error('Ошибка при удалении цели:', error);
+      alert('Не удалось удалить цель. Пожалуйста, попробуйте снова.');
+    }
+  };
+  const handleDeleteKR = async (krId: string) => {
+    const selectedOkr = okrs.find(okr => okr.id === selectedOkrId);
+    if (selectedOkr?.archived) {
+      alert('Нельзя удалять ключевые результаты из архивного OKR');
+      return;
+    }
+    // Найти goalId, которому принадлежит KR
+    const goal = selectedOkr?.goals?.find(g => g.keyResults?.some(kr => kr.id === krId));
+    if (!goal) {
+      console.error('Цель для ключевого результата не найдена');
+      return;
+    }
+    try {
+      await axios.delete(`/okr/goal/${goal.id}/keyresult/${krId}`);
+      reloadOkrs();
+    } catch (error) {
+      console.error('Ошибка при удалении ключевого результата:', error);
+      alert('Не удалось удалить ключевой результат. Пожалуйста, попробуйте снова.');
+    }
+  };
+  const handleDuplicateKR = async (krId: string) => {
+    const selectedOkr = okrs.find(okr => okr.id === selectedOkrId);
+    if (selectedOkr?.archived) {
+      alert('Нельзя дублировать ключевые результаты в архивном OKR');
+      return;
+    }
+    
+    // Находим исходный ключевой результат
+    const originalKr = selectedOkr?.goals
+      ?.flatMap(g => g.keyResults || [])
+      .find(kr => kr.id === krId);
+      
+    if (!originalKr) {
+      console.error('Ключевой результат не найден');
+      return;
+    }
+    
+    // Находим цель, к которой нужно добавить дубликат
+    const goal = selectedOkr?.goals?.find(g => g.keyResults?.some(kr => kr.id === krId));
+    if (!goal) {
+      console.error('Цель для ключевого результата не найдена');
+      return;
+    }
+    
+    try {
+      // Создаем новый ключевой результат с теми же данными, но новым ID
+      await axios.post(`/okr/goal/${goal.id}/keyresult`, {
+        title: `${originalKr.title} (копия)`,
+        metric: originalKr.metric,
+        base: originalKr.base,
+        plan: originalKr.plan,
+        formula: originalKr.formula
+      });
+      
+      // Обновляем данные
+      reloadOkrs();
+    } catch (error) {
+      console.error('Ошибка при дублировании ключевого результата:', error);
+      alert('Не удалось дублировать ключевой результат. Пожалуйста, попробуйте снова.');
+    }
+  };
+
+  // Дублирование цели
+  const handleDuplicateGoal = async (goalId: string) => {
+    const selectedOkr = okrs.find(okr => okr.id === selectedOkrId);
+    if (selectedOkr?.archived) {
+      alert('Нельзя дублировать цели в архивном OKR');
+      return;
+    }
+    
+    if (!window.confirm('Вы уверены, что хотите дублировать эту цель со всеми ключевыми результатами?')) {
+      return;
+    }
+    
+    try {
+      await axios.post(`/okr/goal/${goalId}/duplicate`);
+      reloadOkrs();
+      
+      // Показываем уведомление об успешном дублировании
+      // (можно заменить на toast/snackbar при необходимости)
+      console.log('Цель успешно продублирована');
+    } catch (error) {
+      console.error('Ошибка при дублировании цели:', error);
+      alert('Не удалось дублировать цель. Пожалуйста, попробуйте снова.');
+    }
+  };
+
+  const createGoal = async (title: string) => {
+    if (!title.trim() || !selectedOkrId) return;
+    const selected = okrs.find(okr => okr.id === selectedOkrId);
+    if (selected?.archived) {
+      alert('Нельзя добавлять цели в архивный OKR');
+      return;
+    }
+    try {
+      await axios.post(`/okr/${selectedOkrId}/goal`, { title });
+      await reloadOkrs();
+    } catch (error) {
+      console.error('Ошибка при создании цели:', error);
+      alert('Не удалось создать цель. Пожалуйста, попробуйте снова.');
+    }
+  };
+
+  const createKeyResult = async (goalId: string, title: string) => {
+    if (!title.trim()) return;
+    const selected = okrs.find(okr => okr.id === selectedOkrId);
+    if (selected?.archived) {
+      alert('Нельзя добавлять ключевые результаты в архивный OKR');
+      return;
+    }
+    try {
+      await axios.post(`/okr/goal/${goalId}/keyresult`, { 
+        title, 
+        metric: '',
+        base: 0,
+        plan: 0,
+        formula: 'Текущее'
+      });
+      await reloadOkrs();
+    } catch (error) {
+      console.error('Ошибка при создании ключевого результата:', error);
+      alert('Не удалось создать ключевой результат. Пожалуйста, попробуйте снова.');
+    }
   };
 
   if (loading) {
@@ -83,50 +549,43 @@ const Dashboard = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', px: 0, mx: 0 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" mb={4} spacing={2}>
-        <Typography variant="h4" fontWeight={700}>Мои OKR</Typography>
-        <Box display="flex" alignItems="center" gap={2}>
-          <Button variant="contained" startIcon={<AddIcon />} sx={{ borderRadius: 2, fontWeight: 600, minWidth: 160 }} onClick={() => setAddDialogOpen(true)}>
-            Новый OKR
-          </Button>
-        </Box>
-      </Stack>
-      {/* Динамические фильтры по периодам */}
-      <Stack direction="row" spacing={1} mb={3}>
-        {periods.map(period => (
-          <Chip
-            key={period}
-            label={period}
-            color={period === selectedPeriod ? 'primary' : 'default'}
-            clickable
-            sx={{ fontWeight: 600 }}
-            onClick={() => setSelectedPeriod(period)}
-          />
-        ))}
-      </Stack>
-      {filteredOkrs.length === 0 ? (
-        <Typography color="text.secondary">Нет OKR за выбранный период</Typography>
+    <Box sx={{ width: '100%', maxWidth: '100%', px: { xs: 1, sm: 2, md: 3 }, mx: 0 }}>
+      <OkrHeader
+        users={users}
+        selectedUserId={selectedUserId}
+        onUserChange={setSelectedUserId}
+        okrs={displayedOkrs}
+        selectedOkrId={selectedOkrId}
+        onOkrChange={updateSelectedOkrId}
+        onOkrCreated={reloadOkrs}
+        showWeeklyMonitoring={showWeeklyMonitoring}
+        onToggleWeeklyMonitoring={updateShowWeeklyMonitoring}
+        overallProgress={overallProgress}
+      />
+      
+      <OkrTabs showArchived={showArchived} archivedCount={archivedOkrs.length} onChange={handleTabsChange} />
+      {!selectedOkrId || !selectedOkr ? (
+        <EmptyState 
+          showArchived={showArchived} 
+          isViewingOwnOkrs={isViewingOwnOkrs || false} 
+          onCreateClick={() => setAddDialogOpen(true)} 
+        />
       ) : (
-        <Grid container spacing={3} sx={{ width: '100%', maxWidth: '100%', margin: 0 }}>
-          {filteredOkrs.map(okr => (
-            <Grid item xs={12} key={okr.id} sx={{ width: '100%' }}>
-              <Card elevation={3} sx={{ borderRadius: 4, mb: 2, width: '100%' }}>
-                <CardContent>
-                  <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-                    <Typography variant="h6" fontWeight={700}>{okr.period}</Typography>
-                    {okr.archived && <Chip label="Архив" color="default" size="small" />}
-                  </Stack>
-                  <Divider sx={{ mb: 2 }} />
-                  <Stack spacing={3}>
-                    {okr.goals.map(goal => (
-                      <GoalItem key={goal.id} goal={goal} okrId={okr.id} onGoalChange={(g) => handleGoalChange(okr.id, g)} mode="weeks" />
-                    ))}
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
+        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ width: '100%', maxWidth: '100%', margin: 0, p: 0 }}>
+          <Grid item xs={12} key={selectedOkr.id} sx={{ width: '100%', p: 0 }}>
+            <OkrDetails
+              okr={selectedOkr}
+              isViewingOwnOkrs={!!isViewingOwnOkrs}
+              showWeeklyMonitoring={showWeeklyMonitoring}
+              onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
+              onDeleteGoal={handleDeleteGoal}
+              onDeleteKR={handleDeleteKR}
+              onDuplicateGoal={handleDuplicateGoal}
+              onDuplicateKR={handleDuplicateKR}
+              onCreateGoal={createGoal}
+              onCreateKr={createKeyResult}
+            />
+          </Grid>
         </Grid>
       )}
       {/* Модалка создания OKR */}

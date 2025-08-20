@@ -1,20 +1,13 @@
 import React, { useState } from 'react';
-import { Box, TextField, Select, MenuItem, IconButton, Tooltip, CircularProgress } from '@mui/material';
+import { TextField, Select, MenuItem, IconButton, useTheme, useMediaQuery, Box, CircularProgress, Menu } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
-interface KeyResult {
-  id: string;
-  title: string;
-  metric: string;
-  base: number;
-  plan: number;
-  formula: string;
-  fact: number;
-}
+import type { KeyResult } from '../types';
 
 interface KeyResultRowProps {
-  kr: KeyResult;
+  kr: KeyResult & { formula?: string; comment?: string };
   index?: number;
   editKR: { krId: string; field: keyof KeyResult } | null;
   editValue: string | number | null;
@@ -25,52 +18,261 @@ interface KeyResultRowProps {
   onDeleteKR: (krId: string) => void;
   setEditValue: (v: any) => void;
   loading?: boolean;
+  readOnly?: boolean; // режим только для просмотра
+  // Weekly monitoring props
+  weeks?: number[];
+  weeklyValues?: { [week: number]: number | null };
+  weeklyEdit?: { [week: number]: boolean };
+  weeklyLoading?: boolean;
+  isCurrentWeek?: (week: number) => boolean;
+  onWeeklyChange?: (week: number, value: number) => void;
+  onWeeklySave?: (week: number) => void;
+  onWeeklyEdit?: (week: number) => void;
+  // Formula and comment props
+  formulas?: string[];
+  onFormulaChange?: (formula: string) => void;
+  savingFormula?: boolean;
+  showWeeklyMonitoring?: boolean;
 }
 
 const METRICS = ['%', 'Рубли', 'Штуки'];
-const FORMULAS = [
-  'Макс',
-  'Среднее',
-  'Текущее',
-  'Мин',
-  'Сумма',
-  'Макс без базы',
-  'Среднее без базы',
-  'Текущее без базы',
-  'Минимум без базы',
-  'Сумма без базы',
-];
+// FORMULAS больше не нужен
 
 const rowStyle: React.CSSProperties = {
-  background: '#fff',
-  borderRadius: 12,
-  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  background: 'transparent',
+  borderRadius: 0,
+  boxShadow: 'none',
   verticalAlign: 'middle',
-  height: 48,
-  minHeight: 48,
+  height: 36,
+  minHeight: 36,
   fontFamily: 'Inter, Roboto, Arial, sans-serif',
-  transition: 'box-shadow 0.2s, background 0.2s, opacity 0.3s',
+  transition: 'background 0.2s, opacity 0.3s',
 };
 const tdStyle: React.CSSProperties = {
-  padding: '12px 8px',
-  fontSize: 15,
+  padding: '6px 2px',
+  fontSize: 13,
   color: '#1a202c',
   border: 'none',
   background: 'transparent',
-  textAlign: 'center',
+  textAlign: 'center' as const,
   whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   verticalAlign: 'middle',
-  minWidth: 60,
-  minHeight: 32,
-  transition: 'background 0.2s, color 0.2s, min-width 0.2s, min-height 0.2s',
+  minHeight: 28,
+  transition: 'background 0.2s, color 0.2s',
+  boxSizing: 'border-box',
 };
-const tdLeft: React.CSSProperties = { ...tdStyle, textAlign: 'left', minWidth: 120 };
 
-const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading }) => {
-  const percent = kr.plan > 0 ? Math.round((kr.fact / kr.plan) * 100) : 0;
+// Specific width styles for each column to match header
+const progressStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '50px', 
+  minWidth: '50px', 
+  maxWidth: '50px',
+  padding: '4px 2px',
+  fontSize: 13,
+};
+const numberStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '32px', 
+  minWidth: '32px', 
+  maxWidth: '32px',
+  padding: '4px 1px',
+  fontSize: 13,
+};
+const titleStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  textAlign: 'left', 
+  width: '180px', 
+  minWidth: '180px', 
+  maxWidth: '180px',
+  whiteSpace: 'normal',
+  wordWrap: 'break-word',
+  overflowWrap: 'break-word',
+  wordBreak: 'break-word',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  textOverflow: 'ellipsis',
+  lineHeight: '1.3',
+  padding: '4px 6px',
+  fontSize: '13px !important',
+  fontWeight: 500,
+};
+const metricStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '50px', 
+  minWidth: '50px', 
+  maxWidth: '50px',
+  padding: '4px 2px',
+  fontSize: 13,
+};
+const baseStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '44px', 
+  minWidth: '44px', 
+  maxWidth: '44px',
+  padding: '4px 1px',
+  fontSize: 13,
+};
+const planStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '44px', 
+  minWidth: '44px', 
+  maxWidth: '44px',
+  padding: '4px 1px',
+  fontSize: 13,
+};
+const factStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '44px', 
+  minWidth: '44px', 
+  maxWidth: '44px',
+  padding: '4px 1px',
+  fontSize: 13,
+};
+const formulaStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '80px', 
+  minWidth: '80px', 
+  maxWidth: '80px',
+  padding: '4px 2px',
+  fontSize: 13,
+};
+const commentStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  textAlign: 'left', 
+  whiteSpace: 'normal',
+  wordWrap: 'break-word',
+  overflowWrap: 'break-word',
+  wordBreak: 'break-word',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  textOverflow: 'ellipsis',
+  lineHeight: '1.3',
+  padding: '4px 6px',
+  fontSize: '13px !important',
+  fontWeight: 400,
+  width: '120px',
+  minWidth: '120px',
+  maxWidth: '120px',
+};
+const actionStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '40px', 
+  minWidth: '40px', 
+  maxWidth: '40px', 
+  padding: '4px 1px',
+  fontSize: 13,
+};
+const weekStyle: React.CSSProperties = { 
+  ...tdStyle, 
+  width: '40px', 
+  minWidth: '40px', 
+  maxWidth: '40px', 
+  padding: '4px 1px',
+  fontSize: 13,
+};
+
+const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading, readOnly = false, weeks = [], weeklyValues = {}, weeklyEdit = {}, weeklyLoading = false, isCurrentWeek = () => false, onWeeklyChange, onWeeklySave, onWeeklyEdit, formulas = [], onFormulaChange, savingFormula = false, showWeeklyMonitoring = false }) => {
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  // Calculate progress percentage, ensuring it doesn't exceed 100%
+  const progress = kr.plan > 0 ? (kr.fact / kr.plan) * 100 : 0;
+  const percent = Math.min(Math.round(progress), 100);
+
+  // Адаптивные стили для мобильных устройств
+  const adaptiveStyles = {
+    progress: { ...progressStyle, width: isMobile ? '36px' : '44px', minWidth: isMobile ? '36px' : '44px', maxWidth: isMobile ? '36px' : '44px', fontSize: isMobile ? 10 : 11, padding: '2px 1px' },
+    number: { ...numberStyle, width: isMobile ? '20px' : '28px', minWidth: isMobile ? '20px' : '28px', maxWidth: isMobile ? '20px' : '28px', fontSize: isMobile ? 10 : 11, padding: '2px 1px' },
+    title: { 
+      ...titleStyle, 
+      width: isMobile ? '180px' : '180px', 
+      minWidth: isMobile ? '180px' : '450px', 
+      maxWidth: isMobile ? '180px' : '450px', 
+      fontSize: isMobile ? 11 : 12,
+      WebkitLineClamp: isMobile ? 3 : 4,
+      lineHeight: '1.3',  
+      padding: isMobile ? '4px 4px' : '4px 4px',
+      fontWeight: 500,
+    },
+    metric: { 
+      ...metricStyle, 
+      width: isMobile ? '32px' : '40px', 
+      minWidth: isMobile ? '32px' : '40px', 
+      maxWidth: isMobile ? '32px' : '40px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px',
+      textAlign: 'center' as const,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    },
+    base: { 
+      ...baseStyle, 
+      width: isMobile ? '32px' : '40px', 
+      minWidth: isMobile ? '32px' : '40px', 
+      maxWidth: isMobile ? '32px' : '40px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px',
+      textAlign: 'center' as const,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    },
+    plan: { 
+      ...planStyle, 
+      width: isMobile ? '32px' : '40px', 
+      minWidth: isMobile ? '32px' : '40px', 
+      maxWidth: isMobile ? '32px' : '40px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px',
+      textAlign: 'center' as const,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis'
+    },
+    fact: { 
+      ...factStyle, 
+      width: isMobile ? '32px' : '40px', 
+      minWidth: isMobile ? '32px' : '40px', 
+      maxWidth: isMobile ? '32px' : '40px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px',
+      textAlign: 'center' as const,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      fontWeight: 500
+    },
+    formula: { 
+      ...formulaStyle, 
+      width: isMobile ? '60px' : '80px', 
+      minWidth: isMobile ? '60px' : '80px', 
+      maxWidth: isMobile ? '60px' : '80px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px'
+    },
+    comment: { 
+      ...commentStyle, 
+      width: isMobile ? '80px' : '100px', 
+      minWidth: isMobile ? '80px' : '100px', 
+      maxWidth: isMobile ? '80px' : '100px', 
+      fontSize: isMobile ? 10 : 11,
+      padding: '2px 1px'
+    },
+    action: { ...actionStyle, width: isMobile ? '40px' : '50px', minWidth: isMobile ? '40px' : '50px', maxWidth: isMobile ? '40px' : '50px' },
+    week: { ...weekStyle, width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px', maxWidth: isMobile ? '40px' : '48px', fontSize: isMobile ? 11 : 15 }
+  };
   // Локальное состояние для плавного ввода
   const [localValue, setLocalValue] = useState<any>(null);
   const [loadingField, setLoadingField] = useState<keyof KeyResult | null>(null);
+  const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(menuAnchor);
 
   // Универсальный обработчик изменения
   const handleChange = (field: keyof KeyResult, value: any) => {
@@ -93,17 +295,17 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       pointerEvents: loading ? 'none' : undefined,
       transition: 'opacity 0.3s, background 0.2s',
     }}>
-      {/* Процент выполнения + лоадер */}
-      <td style={{ ...tdStyle, fontWeight: 700, color: percent >= 80 ? '#43a047' : percent >= 40 ? '#ffb300' : '#ef5350', position: 'relative', minWidth: 80 }}>
-        <span style={{ display: 'inline-block', minWidth: 24, minHeight: 18, verticalAlign: 'middle', transition: 'min-width 0.2s' }}>
+      {/* Прогресс */}
+      <td style={adaptiveStyles.progress}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: percent >= 100 ? '#22c55e' : percent >= 50 ? '#f59e0b' : '#ef4444', fontWeight: 600 }}>
           {loading && <CircularProgress size={18} sx={{ position: 'absolute', left: 2, top: '50%', transform: 'translateY(-50%)', transition: 'opacity 0.2s' }} />}
-        </span>
-        <span style={{ marginLeft: loading ? 28 : 0, display: 'inline-block', minWidth: 36, transition: 'margin-left 0.2s, color 0.2s' }}>{percent}%</span>
+          {percent}%
+        </Box>
       </td>
       {/* Порядковый номер KR */}
-      <td style={tdStyle}>{typeof index === 'number' ? index + 1 : ''}</td>
+      <td style={adaptiveStyles.number}>{typeof index === 'number' ? index + 1 : ''}</td>
       {/* Название */}
-      <td style={tdLeft}>
+      <td style={adaptiveStyles.title}>
         {editKR?.krId === kr.id && editKR.field === 'title' ? (
           <TextField
             value={localValue !== null ? localValue : editValue}
@@ -111,16 +313,72 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('title')}
             autoFocus
             size="small"
-            sx={{ width: '100%' }}
+            fullWidth
+            multiline
+            variant="outlined"
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#fff',
+                '&:hover:not(.Mui-disabled)': {
+                  borderColor: '#1565c0',
+                  backgroundColor: '#f8fafc'
+                },
+                '&.Mui-focused': {
+                  borderColor: '#1976d2',
+                  boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: 'rgba(0, 0, 0, 0.23)'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#1976d2',
+                  borderWidth: '1px'
+                },
+              },
+              '& .MuiInputBase-input': {
+                padding: '8px',
+                fontSize: isMobile ? 12 : 14,
+                lineHeight: 1.4,
+                whiteSpace: 'pre-wrap',
+                overflowWrap: 'break-word',
+              },
+            }}
             disabled={archived || loadingField === 'title'}
-            InputProps={{ endAdornment: loadingField === 'title' ? <CircularProgress size={16} /> : null }}
+            InputProps={{ 
+              endAdornment: loadingField === 'title' ? (
+                <CircularProgress size={16} sx={{ mr: 1, mt: 1, alignSelf: 'flex-start' }} />
+              ) : null,
+            }}
           />
         ) : (
-          <Box onClick={() => !archived && onEditCell(kr.id, 'title', kr.title)} sx={{ cursor: archived ? 'default' : 'pointer', minHeight: 32, display: 'flex', alignItems: 'center' }}>{kr.title}</Box>
+          <Box 
+            onClick={() => !archived && !readOnly && onEditCell(kr.id, 'title', kr.title)} 
+            sx={{ 
+              cursor: (archived || readOnly) ? 'default' : 'pointer', 
+              minHeight: 44,
+              display: 'flex',
+              alignItems: 'center',
+              padding: '8px 12px',
+              borderRadius: 1,
+              transition: 'all 0.2s',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              lineHeight: '1.4',
+              maxHeight: 'none',
+              WebkitLineClamp: 4,
+              WebkitBoxOrient: 'vertical',
+              '&:hover': !archived && !readOnly ? {
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #e0e0e0'
+              } : {}
+            }}
+          >
+            {kr.title}
+          </Box>
         )}
       </td>
       {/* Метрика */}
-      <td style={tdStyle}>
+      <td style={adaptiveStyles.metric}>
         {editKR?.krId === kr.id && editKR.field === 'metric' ? (
           <Select
             value={localValue !== null ? localValue : editValue}
@@ -128,20 +386,63 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('metric')}
             autoFocus
             size="small"
-            variant="standard"
-            sx={{ minWidth: 48, maxWidth: 70, p: 0, textAlign: 'center', boxShadow: 'none', border: 'none', background: 'transparent' }}
-            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 70 } } }}
-            onClose={() => {}}
+            variant="outlined"
+            sx={{ 
+              width: '100%',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: '#fff',
+                border: '2px solid #1976d2',
+                borderRadius: 1,
+                fontSize: 14,
+                fontWeight: 500,
+                '&:hover': {
+                  borderColor: '#1565c0'
+                },
+                '&.Mui-focused': {
+                  borderColor: '#1976d2',
+                  boxShadow: '0 0 0 3px rgba(25, 118, 210, 0.1)'
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: 'none'
+                }
+              },
+              '& .MuiSelect-select': {
+                textAlign: 'center' as const,
+                padding: '8px 4px',
+                fontSize: 14,
+                fontWeight: 500
+              }
+            }}
+            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 80 } } }}
             disabled={archived || loadingField === 'metric'}
           >
             {METRICS.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
           </Select>
         ) : (
-          <Box onClick={() => !archived && onEditCell(kr.id, 'metric', kr.metric)} sx={{ cursor: archived ? 'default' : 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{kr.metric}</Box>
+          <Box 
+            onClick={() => !archived && !readOnly && onEditCell(kr.id, 'metric', kr.metric)} 
+            sx={{ 
+              cursor: (archived || readOnly) ? 'default' : 'pointer', 
+              minHeight: 32, 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '6px 8px',
+              borderRadius: 1,
+              transition: 'all 0.2s',
+              '&:hover': !archived && !readOnly ? {
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #e0e0e0'
+              } : {}
+            }}
+          >
+            {kr.metric}
+          </Box>
         )}
       </td>
       {/* База */}
-      <td style={tdStyle}>
+      {/* Base Cell */}
+      <td style={adaptiveStyles.base}>
         {editKR?.krId === kr.id && editKR.field === 'base' ? (
           <TextField
             type="number"
@@ -150,16 +451,49 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('base')}
             autoFocus
             size="small"
-            sx={{ width: 60 }}
+            sx={{ 
+              width: '100%',
+              '& .MuiOutlinedInput-input': {
+                textAlign: 'center' as const,
+                padding: '4px 8px',
+                fontSize: isMobile ? 12 : 14,
+                height: 'auto',
+              },
+            }}
             disabled={archived || loadingField === 'base'}
-            InputProps={{ endAdornment: loadingField === 'base' ? <CircularProgress size={16} /> : null }}
+            InputProps={{ 
+              endAdornment: loadingField === 'base' ? <CircularProgress size={16} /> : null,
+              sx: { height: 'auto' }
+            }}
           />
         ) : (
-          <Box onClick={() => !archived && onEditCell(kr.id, 'base', kr.base)} sx={{ cursor: archived ? 'default' : 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{kr.base}</Box>
+          <Box 
+            onClick={() => !archived && !readOnly && onEditCell(kr.id, 'base', kr.base)}
+            sx={{
+              cursor: (archived || readOnly) ? 'default' : 'pointer',
+              minHeight: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 2px',
+              borderRadius: 1,
+              transition: 'all 0.2s',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              '&:hover': !archived && !readOnly ? {
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #e0e0e0'
+              } : {}
+            }}
+          >
+            {typeof kr.base === 'number' ? kr.base.toLocaleString() : kr.base}
+          </Box>
         )}
       </td>
-      {/* План */}
-      <td style={tdStyle}>
+
+      {/* Plan Cell */}
+      <td style={adaptiveStyles.plan}>
         {editKR?.krId === kr.id && editKR.field === 'plan' ? (
           <TextField
             type="number"
@@ -168,53 +502,151 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('plan')}
             autoFocus
             size="small"
-            sx={{ width: 60 }}
+            sx={{ 
+              width: '100%',
+              '& .MuiOutlinedInput-input': {
+                textAlign: 'center' as const,
+                padding: '4px 8px',
+                fontSize: isMobile ? 12 : 14,
+                height: 'auto',
+              },
+            }}
             disabled={archived || loadingField === 'plan'}
-            InputProps={{ endAdornment: loadingField === 'plan' ? <CircularProgress size={16} /> : null }}
+            InputProps={{ 
+              endAdornment: loadingField === 'plan' ? <CircularProgress size={16} /> : null,
+              sx: { height: 'auto' }
+            }}
           />
         ) : (
-          <Box onClick={() => !archived && onEditCell(kr.id, 'plan', kr.plan)} sx={{ cursor: archived ? 'default' : 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{kr.plan}</Box>
-        )}
-      </td>
-      {/* Факт */}
-      <td style={tdStyle}>
-        <Box sx={{ minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{kr.fact}</Box>
-      </td>
-      {/* Формула */}
-      <td style={tdStyle}>
-        {editKR?.krId === kr.id && editKR.field === 'formula' ? (
-          <Select
-            value={localValue !== null ? localValue : editValue}
-            onChange={e => handleChange('formula', e.target.value)}
-            onBlur={() => handleSave('formula')}
-            autoFocus
-            size="small"
-            variant="standard"
-            sx={{ minWidth: 60, maxWidth: 90, p: 0, textAlign: 'center', boxShadow: 'none', border: 'none', background: 'transparent' }}
-            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 90 } } }}
-            onClose={() => {}}
-            disabled={archived || loadingField === 'formula'}
+          <Box 
+            onClick={() => !archived && !readOnly && onEditCell(kr.id, 'plan', kr.plan)}
+            sx={{
+              cursor: (archived || readOnly) ? 'default' : 'pointer',
+              minHeight: 32,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '4px 2px',
+              borderRadius: 1,
+              transition: 'all 0.2s',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              '&:hover': !archived && !readOnly ? {
+                backgroundColor: '#f5f5f5',
+                border: '1px solid #e0e0e0'
+              } : {}
+            }}
           >
-            {FORMULAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
-          </Select>
-        ) : (
-          <Box onClick={() => !archived && onEditCell(kr.id, 'formula', kr.formula)} sx={{ cursor: archived ? 'default' : 'pointer', minHeight: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{kr.formula}</Box>
+            {typeof kr.plan === 'number' ? kr.plan.toLocaleString() : kr.plan}
+          </Box>
         )}
       </td>
-      {/* Действия */}
-      <td style={{ ...tdStyle, textAlign: 'center', minWidth: 36 }}>
-        <Tooltip title="Дублировать KR" arrow>
-          <IconButton color="primary" onClick={() => onDuplicateKR(kr.id)} disabled={archived} sx={{ color: '#64748b', '&:hover': { color: '#2563eb', background: 'rgba(37,99,235,0.08)' } }}>
-            <ContentCopyIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+
+      {/* Fact Cell */}
+      <td style={adaptiveStyles.fact}>
+        <Box sx={{ 
+          minHeight: 32, 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          padding: '4px 2px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}>
+          {typeof kr.fact === 'number' ? kr.fact.toFixed(2).replace(/\.?0+$/, '') : kr.fact}
+        </Box>
       </td>
-      <td style={{ ...tdStyle, textAlign: 'center', minWidth: 36 }}>
-        <Tooltip title="Удалить KR" arrow>
-          <IconButton color="error" onClick={() => onDeleteKR(kr.id)} disabled={archived} sx={{ color: '#64748b', '&:hover': { color: '#ef5350', background: 'rgba(239,83,80,0.08)' } }}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+      {/* Weekly monitoring columns only appear when showWeeklyMonitoring is true */}
+      {showWeeklyMonitoring && weeks.map(week => (
+        <td key={week} style={adaptiveStyles.week}>
+          {weeklyLoading ? (
+            <CircularProgress size={16} />
+          ) : weeklyEdit[week] ? (
+            <TextField
+              size="small"
+              type="number"
+              value={weeklyValues[week] ?? ''}
+              onChange={e => onWeeklyChange?.(week, Number(e.target.value))}
+              onBlur={() => onWeeklySave?.(week)}
+              autoFocus
+              sx={{ 
+                width: isMobile ? 36 : 44, 
+                fontSize: isMobile ? 12 : 14, 
+                background: '#fff', 
+                borderRadius: 1, 
+                boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)', 
+                transition: 'width 0.2s, font-size 0.2s, background 0.2s',
+                '& .MuiOutlinedInput-input': {
+                  padding: '4px 2px',
+                  textAlign: 'center' as const,
+                  height: 'auto',
+                },
+              }}
+              inputProps={{ 
+                style: { 
+                  textAlign: 'center' as const, 
+                  fontSize: isMobile ? 12 : 14, 
+                  padding: '4px 2px',
+                  height: 'auto'
+                } 
+              }}
+            />
+          ) : (
+            <Box
+              onClick={() => !readOnly && onWeeklyEdit?.(week)}
+              sx={{
+                minWidth: isMobile ? 32 : 36,
+                p: 0,
+                fontSize: isMobile ? 12 : 14,
+                borderRadius: 1,
+                border: isCurrentWeek(week) ? '1px solid #1976d2' : '1px solid #e0e0e0',
+                color: isCurrentWeek(week) ? '#1976d2' : '#444',
+                background: isCurrentWeek(week) ? '#e3f2fd' : '#fff',
+                boxShadow: 'none',
+                transition: 'all 0.15s',
+                cursor: readOnly ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 32,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                '&:hover': !readOnly ? { borderColor: '#1976d2', background: '#e3f2fd' } : {}
+              }}
+            >
+              {weeklyValues[week] ?? '-'}
+            </Box>
+          )}
+        </td>
+      ))}
+      {/* Remove old weekly columns since they're now conditional above */}
+
+      {/* Действия: меню три точки */}
+      <td style={adaptiveStyles.action}>
+        <IconButton
+          onClick={e => setMenuAnchor(e.currentTarget)}
+          disabled={archived || readOnly}
+          aria-label="Действия KR"
+        >
+          <MoreVertIcon />
+        </IconButton>
+        <Menu
+          anchorEl={menuAnchor}
+          open={menuOpen}
+          onClose={() => setMenuAnchor(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <MenuItem onClick={() => { setMenuAnchor(null); onDuplicateKR(kr.id); }} disabled={archived}>
+            <ContentCopyIcon fontSize="small" sx={{ mr: 1 }} /> Дублировать
+          </MenuItem>
+          <MenuItem onClick={() => { setMenuAnchor(null); onDeleteKR(kr.id); }} disabled={archived}>
+            <DeleteIcon fontSize="small" sx={{ mr: 1, color: 'error.main' }} /> <span style={{ color: '#d32f2f' }}>Удалить</span>
+          </MenuItem>
+        </Menu>
       </td>
     </tr>
   );

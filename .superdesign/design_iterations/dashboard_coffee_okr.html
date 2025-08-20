@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewOKR - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="theme_coffee_okr.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); }
+        .sidebar { background: var(--sidebar); border-right: 1px solid var(--border); }
+        .card { background: var(--card); border: 1px solid var(--border); }
+        .nav-link { @apply flex items-center p-3 rounded-lg transition-colors; }
+        .nav-link:hover, .nav-link.active { background: var(--accent); color: var(--accent-foreground); }
+        .coffee-icon { animation: wobble 2s infinite; }
+        @keyframes wobble {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-3px) rotate(-1deg); }
+            75% { transform: translateY(3px) rotate(1deg); }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <div class="sidebar w-64 p-4 flex flex-col">
+        <div class="flex items-center space-x-2 mb-8">
+            <div class="coffee-icon">
+                <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="6" cy="8" r="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="6" cy="16" r="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <span class="text-xl font-bold">BrewOKR</span>
+        </div>
+        
+        <nav class="space-y-1 mb-6">
+            <a href="#" class="nav-link active">
+                <i data-lucide="layout-dashboard" class="w-5 h-5 mr-3"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-link">
+                <i data-lucide="target" class="w-5 h-5 mr-3"></i>
+                <span>My OKRs</span>
+            </a>
+            <a href="#" class="nav-link">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 mr-3"></i>
+                <span>Progress</span>
+            </a>
+        </nav>
+        
+        <div class="mt-auto p-4 bg-accent/10 rounded-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span class="text-sm font-medium">JD</span>
+                </div>
+                <div>
+                    <p class="text-sm font-medium">John Doe</p>
+                    <p class="text-xs text-muted-foreground">john@example.com</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <header class="bg-card border-b p-4">
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold">Dashboard</h1>
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 rounded-full hover:bg-muted">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Active OKRs -->
+                <div class="card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium">Active OKRs</h3>
+                        <div class="p-2 rounded-lg bg-primary/10">
+                            <i data-lucide="target" class="w-4 h-4 text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold mb-2">8</div>
+                    <div class="h-2 bg-muted rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full" style="width: 75%"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-muted-foreground">6 on track, 2 at risk</p>
+                </div>
+
+                <!-- Key Results -->
+                <div class="card p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-sm font-medium">Key Results</h3>
+                        <div class="p-2 rounded-lg bg-green-500/10">
+                            <i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-bold mb-2">24</div>
+                    <div class="h-2 bg-muted rounded-full overflow-hidden">
+                        <div class="h-full bg-green-500 rounded-full" style="width: 65%"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-muted-foreground">15 completed, 9 in progress</p>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-semibold">Recent Activity</h2>
+                    <button class="text-sm text-primary hover:underline">View All</button>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-start pb-4 border-b">
+                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i data-lucide="check" class="w-4 h-4 text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">You completed "Increase customer satisfaction to 90%"</p>
+                            <p class="text-xs text-muted-foreground mt-1">2 hours ago</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i data-lucide="message-square" class="w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">Sarah commented on "Expand to new markets"</p>
+                            <p class="text-xs text-muted-foreground mt-1">5 hours ago</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Coffee icon animation
+        const coffeeIcon = document.querySelector('.coffee-icon');
+        if (coffeeIcon) {
+            setInterval(() => {
+                coffeeIcon.style.transform = `rotate(${Math.random() * 2 - 1}deg)`;
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

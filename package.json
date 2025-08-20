@@ -24,6 +24,7 @@
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.539.0",
     "prisma": "^6.12.0",
     "react-beautiful-dnd": "^13.1.1",
     "ts-node": "^10.9.2",

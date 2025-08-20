@@ -10,30 +10,43 @@ function calcFact(kr: any) {
   const values = (kr.weeklyMonitoring || []).map((w: any) => w.value as number);
   const base = kr.base || 0;
   if (!values.length) return 0;
+  let result;
   switch ((kr.formula || '').toLowerCase()) {
     case 'макс':
-      return Math.max(...values);
+      result = Math.max(...values);
+      break;
     case 'среднее':
-      return values.reduce((a: number, b: number) => a + b, 0) / values.length;
+      result = values.reduce((a: number, b: number) => a + b, 0) / values.length;
+      break;
     case 'текущее':
-      return values[values.length - 1];
+      result = values[values.length - 1];
+      break;
     case 'мин':
-      return Math.min(...values);
+      result = Math.min(...values);
+      break;
     case 'сумма':
-      return values.reduce((a: number, b: number) => a + b, 0);
+      result = values.reduce((a: number, b: number) => a + b, 0);
+      break;
     case 'макс без базы':
-      return Math.max(...values) - base;
+      result = Math.max(...values) - base;
+      break;
     case 'среднее без базы':
-      return values.reduce((a: number, b: number) => a + b, 0) / values.length - base;
+      result = values.reduce((a: number, b: number) => a + b, 0) / values.length - base;
+      break;
     case 'текущее без базы':
-      return values[values.length - 1] - base;
+      result = values[values.length - 1] - base;
+      break;
     case 'минимум без базы':
-      return Math.min(...values) - base;
+      result = Math.min(...values) - base;
+      break;
     case 'сумма без базы':
-      return values.reduce((a: number, b: number) => a + b, 0) - base;
+      result = values.reduce((a: number, b: number) => a + b, 0) - base;
+      break;
     default:
-      return Math.max(...values); // по умолчанию макс
+      result = Math.max(...values); // по умолчанию макс
   }
+  // Округляем до 2 знаков после запятой
+  return Math.round(result * 100) / 100;
 }
 
 // Получить все OKR текущего пользователя
@@ -74,11 +87,27 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
   if (!period) {
     return res.status(400).json({ error: 'Период обязателен' });
   }
+  
+  // Проверяем, существует ли уже OKR с таким периодом у этого пользователя
+  const existingOkr = await prisma.oKR.findFirst({
+    where: {
+      userId: req.user!.userId,
+      period: period.trim(),
+    },
+  });
+  
+  if (existingOkr) {
+    console.log(`Попытка создать дублирующий OKR: ${period} для пользователя ${req.user!.userId}`);
+    return res.status(400).json({ error: `OKR с периодом "${period}" уже существует` });
+  }
+  
   const okr = await prisma.oKR.create({
     data: {
       userId: req.user!.userId,
       period,
       archived: false,
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
     },
   });
   res.status(201).json(okr);
@@ -239,14 +268,21 @@ router.post('/goal/:goalId/keyresult', requireAuth, async (req: AuthRequest, res
 // Обновить ключевой результат
 router.put('/goal/:goalId/keyresult/:krId', requireAuth, async (req: AuthRequest, res) => {
   const { goalId, krId } = req.params;
-  const { title, metric, base, plan, formula } = req.body;
+  const { title, metric, base, plan, formula, comment } = req.body;
   const goal = await prisma.goal.findUnique({ where: { id: goalId }, include: { okr: true } });
   if (!goal || goal.okr.userId !== req.user!.userId || goal.okr.archived) {
     return res.status(403).json({ error: 'Нет доступа или OKR в архиве' });
   }
   const kr = await prisma.keyResult.update({
     where: { id: krId },
-    data: { title, metric, base, plan, formula },
+    data: { 
+      title, 
+      metric, 
+      base, 
+      plan, 
+      formula, 
+      comment: comment || null, // Сохраняем комментарий или null, если не передан
+    },
   });
   res.json(kr);
 });
@@ -258,8 +294,17 @@ router.delete('/goal/:goalId/keyresult/:krId', requireAuth, async (req: AuthRequ
   if (!goal || goal.okr.userId !== req.user!.userId || goal.okr.archived) {
     return res.status(403).json({ error: 'Нет доступа или OKR в архиве' });
   }
-  await prisma.keyResult.delete({ where: { id: krId } });
-  res.json({ success: true });
+  
+  try {
+    // Сначала удаляем связанные записи weeklyMonitoring
+    await prisma.weeklyMonitoringEntry.deleteMany({ where: { keyResultId: krId } });
+    // Затем удаляем сам KR
+    await prisma.keyResult.delete({ where: { id: krId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка при удалении ключевого результата:', error);
+    res.status(500).json({ error: 'Ошибка при удалении ключевого результата' });
+  }
 });
 
 // Добавить/обновить значение недельного мониторинга
@@ -328,9 +373,11 @@ router.get('/user/:userId', requireAuth, async (req: AuthRequest, res) => {
       },
     },
   });
-  // Добавляем вычисление 'факт' для каждого KR
+  // Добавляем вычисление 'факт' для каждого KR и возвращаем startDate/endDate
   const okrsWithFact = okrs.map((okr: any) => ({
     ...okr,
+    startDate: okr.startDate,
+    endDate: okr.endDate,
     goals: okr.goals.map((goal: any) => ({
       ...goal,
       keyResults: goal.keyResults.map((kr: any) => ({
@@ -447,14 +494,59 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res) => {
   if (!okr || okr.userId !== req.user!.userId) {
     return res.status(403).json({ error: 'Нет доступа' });
   }
-  // Удалить все связанные keyResults и goals
-  const goals = await prisma.goal.findMany({ where: { okrId: id } });
-  for (const goal of goals) {
-    await prisma.keyResult.deleteMany({ where: { goalId: goal.id } });
+  
+  try {
+    // Удалить все связанные записи в правильном порядке
+    const goals = await prisma.goal.findMany({ where: { okrId: id } });
+    
+    for (const goal of goals) {
+      // Сначала удаляем weeklyMonitoring для всех KR этой цели
+      const keyResults = await prisma.keyResult.findMany({ where: { goalId: goal.id } });
+      for (const kr of keyResults) {
+        await prisma.weeklyMonitoringEntry.deleteMany({ where: { keyResultId: kr.id } });
+      }
+      // Затем удаляем сами KR
+      await prisma.keyResult.deleteMany({ where: { goalId: goal.id } });
+    }
+    
+    // Удаляем цели
+    await prisma.goal.deleteMany({ where: { okrId: id } });
+    
+    // Удаляем сам OKR
+    await prisma.oKR.delete({ where: { id } });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Ошибка при удалении OKR:', error);
+    res.status(500).json({ error: 'Ошибка при удалении OKR' });
   }
-  await prisma.goal.deleteMany({ where: { okrId: id } });
-  await prisma.oKR.delete({ where: { id } });
-  res.json({ success: true });
+});
+
+// Archive/Unarchive OKR
+router.patch('/:id/archive', requireAuth, async (req: AuthRequest, res) => {
+  const { id } = req.params;
+  const { archived } = req.body;
+
+  // Check if OKR exists and belongs to user
+  const okr = await prisma.oKR.findUnique({
+    where: { id },
+  });
+
+  if (!okr) {
+    return res.status(404).json({ error: 'OKR не найден' });
+  }
+
+  if (okr.userId !== req.user!.userId) {
+    return res.status(403).json({ error: 'Нет доступа' });
+  }
+
+  // Update the archived status
+  const updatedOkr = await prisma.oKR.update({
+    where: { id },
+    data: { archived: archived === true },
+  });
+
+  res.json(updatedOkr);
 });
 
 export default router; 

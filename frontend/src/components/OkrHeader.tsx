@@ -1,35 +1,319 @@
 import React from 'react';
-import { Stack, Typography, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
+import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Switch, FormControlLabel, Menu, ListItemIcon, ListItemText, Divider, IconButton } from '@mui/material';
+import { useState, useRef } from 'react';
+import axios from 'axios';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import UnarchiveIcon from '@mui/icons-material/Unarchive';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface OkrHeaderProps {
-  periods: string[];
-  selectedPeriod: string;
-  onPeriodChange: (period: string) => void;
-  onCreateOkr: () => void;
-  showCreateButton?: boolean;
+  users: { id: string; name: string }[];
+  selectedUserId: string;
+  onUserChange: (userId: string) => void;
+  okrs: { id: string; period: string; archived?: boolean }[];
+  selectedOkrId: string;
+  onOkrChange: (okrId: string) => void;
+  onOkrCreated?: () => void;
+  showWeeklyMonitoring: boolean;
+  onToggleWeeklyMonitoring: (val: boolean) => void;
+  overallProgress?: number;
 }
 
-const OkrHeader: React.FC<OkrHeaderProps> = ({ periods, selectedPeriod, onPeriodChange, onCreateOkr, showCreateButton }) => (
-  <Stack direction="row" alignItems="center" spacing={3} mb={4}>
-    <Typography variant="h4" fontWeight={800} color="primary.main" sx={{ letterSpacing: 0.5 }}>OKR</Typography>
-    <FormControl size="small" sx={{ minWidth: 180 }}>
-      <InputLabel id="period-select-label">Период</InputLabel>
-      <Select
-        labelId="period-select-label"
-        value={selectedPeriod}
-        label="Период"
-        onChange={e => onPeriodChange(e.target.value as string)}
-      >
-        {periods.map(period => (
-          <MenuItem key={period} value={period}>{period}</MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-    {showCreateButton && (
-      <Button variant="contained" onClick={onCreateOkr} startIcon={<AddIcon />}>Создать OKR</Button>
-    )}
-  </Stack>
-);
+const OkrHeader: React.FC<OkrHeaderProps> = ({ 
+  users, 
+  selectedUserId, 
+  onUserChange, 
+  okrs, 
+  selectedOkrId, 
+  onOkrChange, 
+  onOkrCreated, 
+  showWeeklyMonitoring, 
+  onToggleWeeklyMonitoring,
+  overallProgress 
+}) => {
+  const [open, setOpen] = useState(false);
+  const [sessionType, setSessionType] = useState('Q1');
+  const [sessionYear, setSessionYear] = useState(new Date().getFullYear());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const selectedOkr = useRef<{ id: string; archived: boolean } | null>(null);
+
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const createNewOkr = async (type = sessionType, year = sessionYear) => {
+    setCreating(true);
+    setError(null);
+
+    try {
+      // Вычисляем даты по кварталу/году
+      let startDate = '', endDate = '', period = '';
+      if (type === 'Y') {
+        startDate = `${year}-01-01`;
+        endDate = `${year}-12-31`;
+        period = `${year}`;
+      } else {
+        const quarters = {
+          Q1: ['01-01', '03-31'],
+          Q2: ['04-01', '06-30'],
+          Q3: ['07-01', '09-30'],
+          Q4: ['10-01', '12-31'],
+        };
+        const [start, end] = quarters[type as keyof typeof quarters];
+        startDate = `${year}-${start}`;
+        endDate = `${year}-${end}`;
+        period = `${year}-${type}`;
+      }
+
+      console.log('Отправляем запрос на создание OKR:', { period, startDate, endDate });
+      const response = await axios.post('/okr', {
+        period,
+        startDate,
+        endDate,
+      });
+      console.log('OKR создан успешно:', response.data);
+
+      setSessionType('Q1');
+      setSessionYear(new Date().getFullYear());
+      if (typeof onOkrCreated === 'function') onOkrCreated();
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Ошибка при создании OKR:', error);
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError('Произошла ошибка при создании OKR');
+      }
+      throw error;
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCreate = async () => {
+    try {
+      const newOkr = await createNewOkr();
+      if (newOkr?.id) {
+        onOkrChange(newOkr.id);
+      }
+      setOpen(false);
+    } catch (error) {
+      console.error('Failed to create OKR:', error);
+    }
+  };
+
+  const handleDeleteOkr = async () => {
+    setDeleting(true);
+    await axios.delete(`/okr/${selectedOkrId}`);
+    setDeleting(false);
+    setDeleteDialogOpen(false);
+    setMenuAnchorEl(null);
+    if (typeof onOkrCreated === 'function') onOkrCreated();
+  };
+
+  const handleArchiveOkr = async (archived: boolean) => {
+    if (!selectedOkr.current) return;
+
+    setArchiving(true);
+    try {
+      await axios.patch(`/okr/${selectedOkr.current.id}/archive`, { archived });
+      // Close the menu first
+      handleMenuClose();
+      // Then trigger the callback to reload OKRs
+      if (typeof onOkrCreated === 'function') {
+        // Use setTimeout to ensure the menu is closed and state is updated before reloading
+        setTimeout(() => onOkrCreated(), 0);
+      }
+    } catch (error) {
+      console.error('Ошибка при архивации OKR:', error);
+      // Still close the menu on error
+      handleMenuClose();
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, okrId: string, isArchived: boolean) => {
+    selectedOkr.current = { id: okrId, archived: isArchived };
+    setMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchorEl(null);
+    selectedOkr.current = null;
+  };
+
+  return (
+    <Box display="flex" alignItems="center" gap={3} mb={4}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id="user-select-label">Пользователь</InputLabel>
+          <Select
+            labelId="user-select-label"
+            id="user-select"
+            value={selectedUserId}
+            label="Пользователь"
+            onChange={(e) => onUserChange(e.target.value)}
+          >
+            {users.map((user) => (
+              <MenuItem key={user.id} value={user.id}>
+                {user.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <FormControl size="small" sx={{ minWidth: 200 }}>
+          <InputLabel id="okr-label">OKR (Период)</InputLabel>
+          <Select
+            labelId="okr-label"
+            value={selectedOkrId}
+            label="OKR (Период)"
+            onChange={e => onOkrChange(e.target.value)}
+          >
+            {okrs.map(o => (
+              <MenuItem key={o.id} value={o.id}>{o.period}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        
+        {overallProgress !== undefined && selectedOkrId && (
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            bgcolor: '#f3f4f6',
+            borderRadius: 1.5,
+            px: 1.5,
+            py: 0.75,
+            minWidth: 140
+          }}>
+            <Box sx={{ width: '100%', mr: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                <Typography variant="caption" color="text.secondary">Прогресс</Typography>
+                <Typography variant="caption" fontWeight="medium">{overallProgress}%</Typography>
+              </Box>
+              <Box sx={{ 
+                height: 8, 
+                bgcolor: '#e5e7eb', 
+                borderRadius: 4,
+                overflow: 'hidden'
+              }}>
+                <Box 
+                  sx={{ 
+                    height: '100%', 
+                    backgroundColor: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                    width: `${overallProgress}%`,
+                    transition: 'width 0.3s ease-in-out'
+                  }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        )}
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
+        <FormControlLabel
+          control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} />}
+          label="Недельный мониторинг"
+          sx={{ mr: 1, '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 } }}
+        />
+        <IconButton
+          onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
+          disabled={!selectedOkrId}
+          aria-label="Действия с OKR"
+          size="large"
+        >
+          <MoreVertIcon />
+        </IconButton>
+        <Menu
+          anchorEl={menuAnchorEl}
+          open={Boolean(menuAnchorEl)}
+          onClose={handleMenuClose}
+        >
+          <MenuItem onClick={() => setOpen(true)}>
+            <ListItemIcon>
+              <ContentCopyIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Создать OKR</ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={() => selectedOkr.current && handleArchiveOkr(!selectedOkr.current.archived)} disabled={archiving || !selectedOkr.current}>
+            <ListItemIcon>
+              {selectedOkr.current?.archived ? <UnarchiveIcon fontSize="small" /> : <ArchiveIcon fontSize="small" />}
+            </ListItemIcon>
+            <ListItemText>
+              {selectedOkr.current?.archived ? 'Разархивировать' : 'Архивировать'}
+            </ListItemText>
+          </MenuItem>
+          <Divider />
+          <MenuItem onClick={() => setDeleteDialogOpen(true)} disabled={deleting || !selectedOkr.current}>
+            <ListItemIcon>
+              <DeleteIcon fontSize="small" color="error" />
+            </ListItemIcon>
+            <ListItemText primaryTypographyProps={{ color: 'error.main' }}>Удалить OKR</ListItemText>
+          </MenuItem>
+        </Menu>
+      </Box>
+      <Dialog open={open} onClose={() => { setOpen(false); setError(null); }}>
+        <DialogTitle>Создание OKR</DialogTitle>
+        <DialogContent>
+          <Typography fontWeight={500} mb={1} mt={1}>Выберите период</Typography>
+          <ToggleButtonGroup
+            value={sessionType}
+            exclusive
+            onChange={(_, v) => v && setSessionType(v)}
+            sx={{ mb: 2 }}
+          >
+            <ToggleButton value="Q1">Q1</ToggleButton>
+            <ToggleButton value="Q2">Q2</ToggleButton>
+            <ToggleButton value="Q3">Q3</ToggleButton>
+            <ToggleButton value="Q4">Q4</ToggleButton>
+            <ToggleButton value="Y">Год</ToggleButton>
+          </ToggleButtonGroup>
+          <TextField
+            label="Год"
+            type="number"
+            value={sessionYear}
+            onChange={e => setSessionYear(Number(e.target.value))}
+            fullWidth
+            sx={{ mb: 2 }}
+          />
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setOpen(false); setError(null); }}>Отмена</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreate}
+            disabled={creating}
+          >
+            {creating ? 'Создание...' : 'Создать'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Удалить OKR?</DialogTitle>
+        <DialogContent>
+          <Typography>Вы уверены, что хотите удалить выбранный OKR? Это действие необратимо.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+          <Button color="error" variant="contained" onClick={handleDeleteOkr} disabled={deleting}>{deleting ? 'Удаление...' : 'Удалить'}</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+};
 
 export default OkrHeader; 
