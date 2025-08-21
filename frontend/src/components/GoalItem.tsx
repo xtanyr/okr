@@ -1,9 +1,10 @@
 import React from 'react';
-import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogActions, Paper, MenuItem, Select, CircularProgress, Tooltip, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogActions, DialogContent, Paper, MenuItem, Select, CircularProgress, Tooltip, useMediaQuery, useTheme, IconButton } from '@mui/material';
 import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
 import axios from 'axios';
+import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatQuote, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -66,6 +67,19 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   const [loadingKRId, setLoadingKRId] = React.useState<string | null>(null);
   const [savingFormulaId, setSavingFormulaId] = React.useState<string | null>(null);
   const [, setSaving] = React.useState(false);
+  // Rich comment editor state
+  const [commentEditorKrId, setCommentEditorKrId] = React.useState<string | null>(null);
+  const [commentHtml, setCommentHtml] = React.useState<string>('');
+  const [savingComment, setSavingComment] = React.useState<boolean>(false);
+  const editorRef = React.useRef<HTMLDivElement | null>(null);
+  const [commentViewKrId, setCommentViewKrId] = React.useState<string | null>(null);
+  const [rowHeights, setRowHeights] = React.useState<{ [id: string]: number }>({});
+  // Инициализировать содержимое редактора комментария только при открытии, чтобы не сбивался карет
+  React.useEffect(() => {
+    if (commentEditorKrId && editorRef.current) {
+      editorRef.current.innerHTML = commentHtml || '';
+    }
+  }, [commentEditorKrId, commentHtml]);
 
   // useEffect: обновлять локальное состояние инициативы только если оно реально изменилось на сервере
   React.useEffect(() => {
@@ -203,12 +217,13 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         
         // Save the updated fact to server
         await axios.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
-          title: kr.title,
-          metric: kr.metric,
-          base: kr.base,
-          plan: kr.plan,
-          formula: kr.formula,
-          fact: newFact,
+        title: kr.title,
+        metric: kr.metric,
+        base: kr.base,
+        plan: kr.plan,
+        formula: kr.formula,
+        fact: newFact,
+        comment: kr.comment,
         });
       }
       
@@ -241,7 +256,41 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         });
       });
     }
-  }, [goal.keyResults.map(kr => kr.id).join(','), showWeeklyMonitoring]);
+  }, [(goal.keyResults || []).map(kr => kr.id).join(','), showWeeklyMonitoring]);
+
+  // Sync row heights between KeyResults table and Formula/Comment table on desktop
+  React.useEffect(() => {
+    if (isMobile) return;
+    const measure = () => {
+      const rows = Array.from(document.querySelectorAll('tr[data-kr-id]')) as HTMLTableRowElement[];
+      const h: { [id: string]: number } = {};
+      rows.forEach(r => {
+        const id = r.getAttribute('data-kr-id');
+        if (id) h[id] = Math.ceil(r.getBoundingClientRect().height);
+      });
+      setRowHeights(h);
+    };
+
+    const raf = requestAnimationFrame(measure);
+
+    const observers: ResizeObserver[] = [];
+    if (typeof ResizeObserver !== 'undefined') {
+      const rows = Array.from(document.querySelectorAll('tr[data-kr-id]')) as HTMLTableRowElement[];
+      rows.forEach(r => {
+        const ro = new ResizeObserver(() => measure());
+        ro.observe(r);
+        observers.push(ro);
+      });
+    }
+    const onResize = () => measure();
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      observers.forEach(o => o.disconnect());
+      window.removeEventListener('resize', onResize);
+    };
+  }, [(goal.keyResults || []).map(k => k.id).join(','), isMobile]);
 
   // Formula change handler
   const handleFormulaChange = async (krId: string, newFormula: string) => {
@@ -251,24 +300,18 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     const krData = goal.keyResults.find(k => k.id === krId);
     let newFact = 0;
     if (krData) {
-      // Собираем недельные значения (если есть)
-      const weekly = Object.entries(weeklyValues[krId] || {}).map(([w, v]) => ({ weekNumber: Number(w), value: v || 0 }));
-      const sorted = weekly.slice().sort((a, b) => a.weekNumber - b.weekNumber);
-      const values = sorted.map(e => e.value);
-      const base = krData.base || 0;
-      switch ((newFormula || '').toLowerCase()) {
-        case 'макс': newFact = values.length ? Math.max(...values) : 0; break;
-        case 'среднее': newFact = values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0; break;
-        case 'текущее': newFact = sorted.length ? sorted[sorted.length - 1].value : 0; break;
-        case 'мин': newFact = values.length ? Math.min(...values) : 0; break;
-        case 'сумма': newFact = values.reduce((a, b) => a + b, 0); break;
-        case 'макс без базы': newFact = values.length ? Math.max(...values) - base : 0; break;
-        case 'среднее без базы': newFact = values.length ? values.reduce((a, b) => a + b, 0) / values.length - base : 0; break;
-        case 'текущее без базы': newFact = sorted.length ? sorted[sorted.length - 1].value - base : 0; break;
-        case 'минимум без базы': newFact = values.length ? Math.min(...values) - base : 0; break;
-        case 'сумма без базы': newFact = values.reduce((a, b) => a + b, 0) - base; break;
-        default: newFact = values.length ? Math.max(...values) : 0; break;
+      // Собираем недельные значения: сначала из локального weeklyValues, иначе из kr.weeklyMonitoring
+      let weekly: { weekNumber: number; value: number }[] = [];
+      if (weeklyValues[krId] && Object.keys(weeklyValues[krId]).length > 0) {
+        weekly = Object.entries(weeklyValues[krId])
+          .filter(([_, v]) => v !== null && v !== undefined)
+          .map(([week, value]) => ({ weekNumber: parseInt(week, 10), value: Number(value) }));
+      } else if ((krData as any).weeklyMonitoring && (krData as any).weeklyMonitoring.length > 0) {
+        weekly = (krData as any).weeklyMonitoring.map((w: any) => ({ weekNumber: w.weekNumber, value: w.value }));
       }
+      weekly.sort((a, b) => a.weekNumber - b.weekNumber);
+      // Единый пересчёт факта через calcFact
+      newFact = calcFact({ ...krData, formula: newFormula }, weekly);
     }
     
     // Обновляем локально для мгновенного отображения
@@ -284,6 +327,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         plan: krData?.plan,
         formula: newFormula,
         fact: newFact,
+        comment: krData?.comment,
       });
       queryClient.invalidateQueries({ queryKey: ['okrs'] });
     } catch (error) {
@@ -403,15 +447,14 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     return Math.round(result * 100) / 100;
   };
   // Обновлённый onSaveCell: выставляет loadingKRId на время запроса
-  const handleSaveCell = async (kr: KeyResult, field: keyof KeyResult) => {
+  const handleSaveCell = async (kr: KeyResult, field: keyof KeyResult, newValue?: any) => {
     if (archived || readOnly) return;
     setEditKR(null);
     setLoadingKRId(kr.id);
-    // Ensure all required fields are present when spreading kr
-    let updatedKR: KeyResult = { 
-      ...kr, 
-      [field]: editValue,
-      // Ensure formula is always defined, default to empty string if not present
+    // Собираем обновленное значение поля
+    let updatedKR: KeyResult = {
+      ...kr,
+      [field]: newValue !== undefined ? newValue : editValue,
       formula: kr.formula || ''
     };
     const weekly = weeklyValues[kr.id] !== undefined
@@ -420,12 +463,21 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     if (field === 'formula' || field === 'base') {
       updatedKR.fact = calcFact(updatedKR, weekly);
     }
-    if (!updatedKR.title || typeof updatedKR.metric !== 'string' || !updatedKR.metric || updatedKR.base === undefined || updatedKR.plan === undefined || !updatedKR.formula) {
-      alert('Все поля (название, метрика, база, план, формула) должны быть заполнены!');
-      setLoadingKRId(null);
-      return;
+    // Разрешаем сохранять метрику отдельно, иначе требуем заполнения всех полей
+    if (field === 'metric') {
+      if (typeof updatedKR.metric !== 'string' || !updatedKR.metric) {
+        alert('Метрика должна быть заполнена!');
+        setLoadingKRId(null);
+        return;
+      }
+    } else if (field !== 'title' && field !== 'comment') {
+      if (!updatedKR.title || typeof updatedKR.metric !== 'string' || !updatedKR.metric || updatedKR.base === undefined || updatedKR.plan === undefined || !updatedKR.formula) {
+        alert('Все поля (название, метрика, база, план, формула) должны быть заполнены!');
+        setLoadingKRId(null);
+        return;
+      }
     }
-    // Сохраняем KR
+    // Сохраняем KR (PUT)
     await axios.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
       title: updatedKR.title,
       metric: updatedKR.metric,
@@ -433,7 +485,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       plan: updatedKR.plan,
       formula: updatedKR.formula,
       fact: updatedKR.fact,
-      comment: updatedKR.comment, // Сохраняем комментарий
+      comment: updatedKR.comment,
     });
     // После сохранения — повторно загружаем monitoring и обновляем KR
     const res = await axios.get(`/okr/keyresult/${kr.id}/monitoring`);
@@ -459,7 +511,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       setSaving(false);
       setEditTitle(false);
       setEditTitleValue(res.data.title);
-      onGoalChange(res.data);
+      onGoalChange({ ...goal, title: res.data.title });
     } else {
       setEditTitle(false);
       setEditTitleValue(goal.title);
@@ -483,6 +535,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           plan: kr.plan,
           formula: kr.formula,
           fact: newFact,
+          comment: kr.comment,
         });
         queryClient.invalidateQueries({ queryKey: ['okrs'] });
       }
@@ -492,6 +545,63 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   };
 
 
+
+  // Open rich text comment editor for a KR
+  const openCommentEditor = (kr: KeyResult) => {
+    // Сначала устанавливаем содержимое комментария, затем открываем редактор,
+    // чтобы useEffect при открытии подхватил корректный текст
+    setCommentHtml(kr.comment || '');
+    setCommentEditorKrId(kr.id);
+    setTimeout(() => {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = (kr.comment || '');
+        editorRef.current.focus();
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
+    }, 0);
+  };
+
+  const openCommentView = (kr: KeyResult) => {
+    setCommentViewKrId(kr.id);
+  };
+
+  // Ensure URL has protocol; default to https
+  const ensureExternalUrl = (url: string) => {
+    if (!url) return '';
+    return /^(https?:)?\/\//i.test(url) ? url : `https://${url}`;
+  };
+
+  // After creating a link, add target and rel for security
+  const setSelectionLinkAttrs = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    let node: Node | null = sel.anchorNode;
+    while (node && node.nodeType === 3) node = node.parentNode;
+    let el: HTMLElement | null = (node as HTMLElement) || null;
+    while (el && el.tagName !== 'A') el = el.parentElement;
+    if (el && el.tagName === 'A') {
+      el.setAttribute('target', '_blank');
+      el.setAttribute('rel', 'noopener noreferrer');
+    }
+  };
+
+  // Intercept clicks on links in view dialog to open externally
+  const handleViewAnchorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a') as HTMLAnchorElement | null;
+    if (anchor) {
+      e.preventDefault();
+      const url = ensureExternalUrl(anchor.getAttribute('href') || '');
+      if (url) window.open(url, '_blank', 'noopener');
+    }
+  };
 
   // Calculate average progress for the goal, ensuring it doesn't exceed 100%
   const avgProgress = goal.keyResults.length > 0 
@@ -521,12 +631,32 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       {/* --- Визуальный блок среднего прогресса слева от заголовка цели --- */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Box sx={{
-            width: 48, height: 48, borderRadius: '50%',
-            background: avgProgress >= 80 ? '#ecfdf5' : avgProgress >= 40 ? '#fffbeb' : '#fef2f2',
-            color: avgProgress >= 80 ? '#22c55e' : avgProgress >= 40 ? '#f59e0b' : '#ef4444',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
-          }}>{avgProgress}%</Box>
+          <Box sx={{ position: 'relative', display: 'inline-flex', width: 56, height: 56 }}>
+            <CircularProgress variant="determinate" value={100} size={56} thickness={5} sx={{ color: '#e5e7eb' }} />
+            <CircularProgress 
+              variant="determinate" 
+              value={avgProgress} 
+              size={56} 
+              thickness={5} 
+              sx={{ 
+                color: avgProgress >= 80 ? '#22c55e' : avgProgress >= 40 ? '#f59e0b' : '#ef4444',
+                position: 'absolute', 
+                left: 0 
+              }} 
+            />
+            <Box sx={{ 
+              top: 0, left: 0, bottom: 0, right: 0, 
+              position: 'absolute', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontWeight: 700, 
+              fontSize: 16,
+              color: avgProgress >= 80 ? '#22c55e' : avgProgress >= 40 ? '#f59e0b' : '#ef4444',
+            }}>
+              {avgProgress}%
+            </Box>
+          </Box>
           {editTitle ? (
             <TextField
               value={editTitleValue}
@@ -669,7 +799,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 <tr style={{
                   borderBottom: '2px solid #e5e7eb',
                   background: '#f9fafb',
-                  height: 48,
+                  height: isMobile ? 32 : 36,
                   fontFamily: 'Inter, Roboto, Arial, sans-serif',
                 }}>
                   {getWeeksForPeriod(startDate, endDate).map((week, i) => {
@@ -685,7 +815,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                         fontSize: isMobile ? 11 : 13,
                         color: isCurrent ? '#111' : '#666',
                         background: isCurrent ? '#f3f4f6' : '#f7f8fa',
-                        padding: isMobile ? 4 : 8,
+                        padding: isMobile ? '2px 2px 4px' : '2px 2px 6px',
                         borderTop: '1px solid #eee',
                         borderBottom: '1px solid #eee',
                         transition: 'background 0.2s, color 0.2s'
@@ -708,7 +838,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               </thead>
               <tbody>
                 {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
-                  <tr key={kr.id} style={{ height: 48 }}>
+                  <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
                     {getWeeksForPeriod(startDate, endDate).map(week => (
                       <td key={week} style={{
                         width: isMobile ? '40px' : '48px',
@@ -735,7 +865,20 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                             onChange={e => handleWeeklyChange(kr.id, week, Number(e.target.value))}
                             onBlur={() => handleWeeklySave(kr.id, week)}
                             autoFocus
-                            sx={{ width: isMobile ? 30 : 34, fontSize: isMobile ? 11 : 12, background: '#fff', borderRadius: 1, boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)' }}
+                            sx={{ 
+                              width: isMobile ? 30 : 34, 
+                              fontSize: isMobile ? 11 : 12, 
+                              background: '#fff', 
+                              borderRadius: 1, 
+                              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)',
+                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                                WebkitAppearance: 'none',
+                                margin: 0,
+                              },
+                              '& input[type=number]': {
+                                MozAppearance: 'textfield',
+                              },
+                            }}
                             inputProps={{ style: { textAlign: 'center', fontSize: isMobile ? 12 : 14, padding: isMobile ? 1 : 2 } }}
                           />
                         ) : (
@@ -790,11 +933,11 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 <tr style={{
                   borderBottom: '2px solid #e5e7eb',
                   background: '#f9fafb',
-                  height: 48,
+                  height: isMobile ? 32 : 36,
                   fontFamily: 'Inter, Roboto, Arial, sans-serif',
                 }}>
                   <th style={{ 
-                    padding: isMobile ? '8px 4px' : '12px 8px', 
+                    padding: isMobile ? '4px 4px' : '6px 6px', 
                     fontWeight: 600, 
                     fontSize: isMobile ? 9 : 12, 
                     color: '#64748b', 
@@ -807,7 +950,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                     maxWidth: '50%' 
                   }}>Формула</th>
                   <th style={{ 
-                    padding: isMobile ? '8px 4px' : '12px 8px', 
+                    padding: isMobile ? '4px 4px' : '6px 6px', 
                     fontWeight: 600, 
                     fontSize: isMobile ? 9 : 12, 
                     color: '#64748b', 
@@ -823,13 +966,13 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               </thead>
               <tbody>
                 {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
-                  <tr key={kr.id} style={{ height: 48  }}>
+                  <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
                     {/* Формула */}
                     <td style={{
                       width: '50%',
                       minWidth: '50%',
                       maxWidth: '50%',
-                      padding: isMobile ? '8px 4px' : '12px 8px',
+                      padding: isMobile ? '6px 2px' : '4px 2px',
                       fontSize: isMobile ? 9 : 12,
                       color: '#1a202c',
                       border: 'none',
@@ -861,12 +1004,12 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       width: isMobile ? '120px' : '200px',
                       minWidth: isMobile ? '120px' : '200px',
                       maxWidth: isMobile ? '120px' : '200px',
-                      padding: isMobile ? '4px 2px' : '8px 4px',
+                      padding: isMobile ? '4px 2px' : '4px 2px',
                       color: '#1a202c',
                       border: 'none',
                       background: 'transparent',
                       textAlign: 'left',
-                      verticalAlign: 'top',
+                      verticalAlign: 'middle',
                       transition: 'all 0.2s',
                       boxSizing: 'border-box',
                       whiteSpace: 'normal',
@@ -876,119 +1019,9 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       lineHeight: '1.4',
                       fontSize: isMobile ? 9 : 12,
                     }}>
-                      {editKR?.krId === kr.id && editKR.field === 'comment' ? (
-                        <TextField
-                          value={editValue !== null ? editValue : kr.comment || ''}
-                          onChange={e => setEditValue(e.target.value)}
-                          onBlur={() => handleSaveCell(kr, 'comment')}
-                          autoFocus
-                          size="small"
-                          variant="outlined"
-                          multiline
-                          minRows={1}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#fff',
-                              borderRadius: 1,
-                              alignItems: 'flex-start',
-                              '&:hover:not(.Mui-disabled)': {
-                                borderColor: '#111',
-                                backgroundColor: '#f7f7f7'
-                              },
-                              '&.Mui-focused': {
-                                borderColor: '#111',
-                                boxShadow: '0 0 0 2px rgba(0,0,0,0.1)'
-                              },
-                              '& .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'rgba(0, 0, 0, 0.23)'
-                              },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                borderColor: '#111',
-                                borderWidth: '1px'
-                              },
-                              '&:hover .MuiOutlinedInput-notchedOutline': {
-                                borderColor: 'rgba(0, 0, 0, 0.5)'
-                              }
-                            },
-                            '& .MuiInputBase-input': {
-                              textAlign: 'left',
-                              fontSize: isMobile ? 12 : 14,
-                              padding: '8px',
-                              lineHeight: 1.4,
-                              whiteSpace: 'pre-wrap',
-                              overflow: 'auto',
-                              maxHeight: 'none',
-                              '&::-webkit-scrollbar': {
-                                width: '6px',
-                                height: '6px'
-                              },
-                              '&::-webkit-scrollbar-thumb': {
-                                backgroundColor: 'rgba(0,0,0,0.2)',
-                                borderRadius: '3px'
-                              },
-                              '&::-webkit-scrollbar-track': {
-                                backgroundColor: 'transparent'
-                              }
-                            },
-                            '&.Mui-error': {
-                              backgroundColor: '#fff5f5'
-                            }
-                          }}
-                          disabled={archived || loadingKRId === kr.id || readOnly}
-                          InputProps={{
-                            endAdornment: loadingKRId === kr.id ? (
-                              <CircularProgress size={16} sx={{ mr: 1, mt: 1, alignSelf: 'flex-start' }} />
-                            ) : null,
-                          }}
-                        />
-                      ) : (
-                        <Box 
-                          onClick={() => !archived && !readOnly && handleEditCell(kr.id, 'comment', kr.comment || '')}
-                          sx={{
-                            minHeight: 'auto',
-                            display: 'block',
-                            cursor: (archived || readOnly) ? 'default' : 'pointer',
-                            borderRadius: 1,
-                            border: '1px solid transparent',
-                            p: 1,
-                            transition: 'all 0.2s',
-                            width: '100%',
-                            maxWidth: '100%',
-                            '&:hover': !archived && !readOnly ? {
-                              backgroundColor: '#f8fafc',
-                              borderColor: 'rgba(0, 0, 0, 0.23)',
-                            } : {}
-                          }}
-                        >
-                          <Typography 
-                            variant="body2" 
-                            component="div"
-                            sx={{
-                              color: kr.comment ? 'text.primary' : 'text.secondary',
-                              fontStyle: !kr.comment ? 'italic' : 'normal',
-                              lineHeight: 1.4,
-                              textAlign: 'left',
-                              width: '100%',
-                              whiteSpace: 'normal',
-                              wordWrap: 'break-word',
-                              overflowWrap: 'break-word',
-                              wordBreak: 'break-word',
-                              fontSize: isMobile ? 9 : 12,
-                              '& p': {
-                                margin: 0,
-                                padding: 0,
-                                lineHeight: 1.4,
-                              },
-                              '& br': {
-                                display: 'block',
-                                content: '""',
-                                marginBottom: '0.5em',
-                              }
-                            }}
-                            dangerouslySetInnerHTML={{ __html: (kr.comment || 'Добавить комментарий').replace(/\n/g, '<br>') }}
-                          />
-                        </Box>
-                      )}
+                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                        <Button variant="text" size="small" onClick={() => !archived && !readOnly && openCommentView(kr)}>Посмотреть</Button>
+                      </Box>
                     </td>
                   </tr>
                 ))}
@@ -1003,6 +1036,116 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           + Добавить ключевой результат
         </Button>
       )}
+    {/* Comment View Dialog */}
+    <Dialog open={Boolean(commentViewKrId)} onClose={() => setCommentViewKrId(null)} fullWidth maxWidth="md">
+      <DialogTitle>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          Комментарий
+          {!readOnly && (
+            <Button size="small" onClick={() => {
+              const kr = goal.keyResults.find(k => k.id === commentViewKrId);
+              if (kr) {
+                setCommentViewKrId(null);
+                openCommentEditor(kr);
+              }
+            }}>Редактировать</Button>
+          )}
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{
+          border: '1px solid #e0e0e0', borderRadius: 1, p: 1, minHeight: 120,
+          '& p': { m: 0 },
+        }}
+        onClick={handleViewAnchorClick}
+        dangerouslySetInnerHTML={{ __html: (goal.keyResults.find(k => k.id === commentViewKrId)?.comment) || '' }} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setCommentViewKrId(null)}>Закрыть</Button>
+      </DialogActions>
+    </Dialog>
+
+    {/* Rich Text Comment Editor Dialog */}
+    <Dialog 
+      open={Boolean(commentEditorKrId)} 
+      onClose={() => setCommentEditorKrId(null)} 
+      fullWidth 
+      maxWidth="md"
+      TransitionProps={{
+        onEntered: () => {
+          if (editorRef.current) {
+            editorRef.current.innerHTML = commentHtml || '';
+            editorRef.current.focus();
+          }
+        }
+      }}
+    >
+      <DialogTitle>Редактирование комментария</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+          <Tooltip title="Отменить"><span><IconButton size="small" onClick={() => document.execCommand('undo')}><Undo fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Повторить"><span><IconButton size="small" onClick={() => document.execCommand('redo')}><Redo fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Полужирный"><span><IconButton size="small" onClick={() => document.execCommand('bold')}><FormatBold fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Курсив"><span><IconButton size="small" onClick={() => document.execCommand('italic')}><FormatItalic fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Подчеркнутый"><span><IconButton size="small" onClick={() => document.execCommand('underline')}><FormatUnderlined fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Зачеркнутый"><span><IconButton size="small" onClick={() => document.execCommand('strikeThrough')}><StrikethroughS fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Нумерованный список"><span><IconButton size="small" onClick={() => document.execCommand('insertOrderedList')}><FormatListNumbered fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Маркированный список"><span><IconButton size="small" onClick={() => document.execCommand('insertUnorderedList')}><FormatListBulleted fontSize="small" /></IconButton></span></Tooltip>
+                                        <Tooltip title="Цитата"><span><IconButton size="small" onClick={() => document.execCommand('formatBlock', false, 'BLOCKQUOTE')}><FormatQuote fontSize="small" /></IconButton></span></Tooltip>
+                                        <Tooltip title="Ссылка"><span><IconButton size="small" onClick={() => { const input = prompt('Введите URL'); if (input) { const url = ensureExternalUrl(input); document.execCommand('createLink', false, url); setSelectionLinkAttrs(); } }}><LinkIcon fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Удалить ссылку"><span><IconButton size="small" onClick={() => document.execCommand('unlink')}><LinkOff fontSize="small" /></IconButton></span></Tooltip>
+                    <Tooltip title="Очистить форматирование"><span><IconButton size="small" onClick={() => document.execCommand('removeFormat')}><FormatClear fontSize="small" /></IconButton></span></Tooltip>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
+            <FormatColorText fontSize="small" />
+            <input type="color" onChange={(e) => document.execCommand('foreColor', false, e.target.value)} style={{ width: 24, height: 24, border: 'none', background: 'transparent', padding: 0 }} />
+          </Box>
+                  </Box>
+        <Box
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={(e) => setCommentHtml((e.target as HTMLDivElement).innerHTML)}
+          sx={{
+            minHeight: 220,
+            border: '1px solid #e0e0e0',
+            borderRadius: 1,
+            p: 1,
+            fontSize: 14,
+            lineHeight: 1.5,
+            '&:focus': { outline: 'none', borderColor: '#c7c7c7' },
+            backgroundColor: '#fff'
+          }}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setCommentEditorKrId(null)}>Отмена</Button>
+        <Button variant="contained" onClick={async () => {
+          if (!commentEditorKrId) return;
+          setSavingComment(true);
+          const kr = goal.keyResults.find(k => k.id === commentEditorKrId);
+          if (kr) {
+            try {
+              await axios.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
+                title: kr.title,
+                metric: kr.metric,
+                base: kr.base,
+                plan: kr.plan,
+                formula: kr.formula,
+                fact: kr.fact,
+                comment: commentHtml,
+              });
+              const newKeyResults = goal.keyResults.map(k => k.id === kr.id ? { ...k, comment: commentHtml } : k);
+              onGoalChange({ ...goal, keyResults: newKeyResults });
+              setCommentEditorKrId(null);
+            } catch (e) {
+              console.error('Ошибка сохранения комментария', e);
+            } finally {
+              setSavingComment(false);
+            }
+          }
+        }} disabled={savingComment}>{savingComment ? 'Сохранение...' : 'Сохранить'}</Button>
+      </DialogActions>
+    </Dialog>
     </Paper>
   );
 };

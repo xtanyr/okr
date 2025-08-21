@@ -10,7 +10,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const menuItems = [
   { text: 'OKR', icon: <DashboardIcon />, path: '/' },
-  { text: 'Пользователи', icon: <PeopleIcon />, path: '/users' },
+  { text: 'Пользователи', icon: <PeopleIcon />, path: '/users', adminOnly: true },
   { text: 'Профиль', icon: <AssignmentIcon />, path: '/profile' },
 ];
 
@@ -114,6 +114,8 @@ const Sidebar = () => {
           }
         }}>
           {menuItems.map((item) => {
+            // Skip admin-only items if user is not admin
+            if (item.adminOnly && user?.role !== 'ADMIN') return null;
             const selected = location.pathname === item.path;
             return (
               <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>

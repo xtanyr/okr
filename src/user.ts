@@ -67,10 +67,73 @@ router.post('/change-password', requireAuth, async (req: AuthRequest, res) => {
 });
 
 // Удалить пользователя (только admin)
-router.delete('/:userId', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+router.delete('/:userId', requireAuth, async (req: AuthRequest, res) => {
   const { userId } = req.params;
-  await prisma.user.delete({ where: { id: userId } });
-  res.json({ success: true });
+  
+  // Check if user is admin
+  const currentUser = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { role: true }
+  });
+
+  if (currentUser?.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Требуются права администратора' });
+  }
+
+  // Prevent deleting self
+  if (req.user!.userId === userId) {
+    return res.status(400).json({ error: 'Нельзя удалить самого себя' });
+  }
+
+  try {
+    // Delete all related records in transaction
+    await prisma.$transaction([
+      // Delete weekly monitoring entries
+      prisma.weeklyMonitoringEntry.deleteMany({
+        where: {
+          keyResult: {
+            goal: {
+              okr: { userId }
+            }
+          }
+        }
+      }),
+      
+      // Delete key results
+      prisma.keyResult.deleteMany({
+        where: {
+          goal: {
+            okr: { userId }
+          }
+        }
+      }),
+      
+      // Delete goals
+      prisma.goal.deleteMany({
+        where: {
+          okr: { userId }
+        }
+      }),
+      
+      // Delete OKRs
+      prisma.oKR.deleteMany({
+        where: { userId }
+      }),
+      
+      // Finally, delete the user
+      prisma.user.delete({
+        where: { id: userId }
+      })
+    ]);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ 
+      error: 'Ошибка при удалении пользователя',
+      details: error instanceof Error ? error.message : 'Неизвестная ошибка'
+    });
+  }
 });
 
 export default router; 

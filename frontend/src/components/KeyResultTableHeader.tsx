@@ -79,7 +79,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
         borderRadius: isMobile ? 6 : 8,
         boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
         fontWeight: 600,
-        fontSize: isMobile ? 11 : 12,
+        fontSize: isMobile ? 13 : 14,
         color: '#1a202c',
         height: isMobile ? 32 : 36,
         fontFamily: 'Inter, Roboto, Arial, sans-serif',
@@ -87,7 +87,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 
@@ -100,7 +100,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 
@@ -113,7 +113,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '4px 4px' : '6px 6px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 10 : 11, 
+        fontSize: isMobile ? 12 : 13, 
         color: '#1a202c', 
         background: 'transparent', 
         border: 'none', 
@@ -126,7 +126,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 
@@ -139,7 +139,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 
@@ -152,7 +152,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 
@@ -165,7 +165,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({ icon, weeks
       <th style={{ 
         padding: isMobile ? '2px 1px' : '4px 1px', 
         fontWeight: 600, 
-        fontSize: isMobile ? 9 : 10, 
+        fontSize: isMobile ? 11 : 12, 
         color: '#64748b', 
         background: 'transparent', 
         border: 'none', 

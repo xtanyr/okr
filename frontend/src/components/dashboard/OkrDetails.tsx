@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardContent, Divider } from '@mui/material';
 import type { KeyResult } from '../../types';
-import OkrHeaderBar from './OkrHeaderBar';
 import GoalsList from './GoalsList';
 import CreateGoalDialog from './dialogs/CreateGoalDialog';
 import CreateKrDialog from './dialogs/CreateKrDialog';
@@ -79,60 +77,42 @@ const OkrDetails: React.FC<OkrDetailsProps> = ({
   };
 
   return (
-    <Card elevation={3} sx={{ 
-      borderRadius: { xs: 1, sm: 2 }, 
-      mb: { xs: 1, sm: 2 }, 
-      width: '100%',
-      overflow: 'hidden',
-      boxShadow: (theme) => ({
-        xs: theme.shadows[1],
-        sm: theme.shadows[2],
-        md: theme.shadows[3],
-      })
-    }}>
-      <CardContent sx={{ 
-        p: { xs: 1, sm: 2, md: 3 },
-        '&:last-child': { pb: { xs: 1, sm: 2, md: 3 } },
-        '&.MuiCardContent-root': { p: { xs: 1, sm: 2, md: 3 } }
-      }}>
-        <OkrHeaderBar period={okr.period} archived={okr.archived} />
-        <Divider sx={{ mb: 1 }} />
-        <GoalsList
-          goals={okr.goals}
-          okrId={okr.id}
-          archived={okr.archived}
-          readOnly={readOnly}
-          showWeeklyMonitoring={showWeeklyMonitoring}
-          startDate={okr.startDate}
-          endDate={okr.endDate}
-          isViewingOwnOkrs={isViewingOwnOkrs}
-          onGoalChange={onGoalChange}
-          onAddGoalClick={() => setGoalDialogOpen(true)}
-          onAddKR={handleAddKR}
-          onDeleteGoal={onDeleteGoal}
-          onDeleteKR={onDeleteKR}
-          onDuplicateGoal={onDuplicateGoal}
-          onDuplicateKR={onDuplicateKR}
-        />
+    <>
+      <GoalsList
+        goals={okr.goals}
+        okrId={okr.id}
+        archived={okr.archived}
+        readOnly={readOnly}
+        showWeeklyMonitoring={showWeeklyMonitoring}
+        startDate={okr.startDate}
+        endDate={okr.endDate}
+        isViewingOwnOkrs={isViewingOwnOkrs}
+        onGoalChange={onGoalChange}
+        onAddGoalClick={() => setGoalDialogOpen(true)}
+        onAddKR={handleAddKR}
+        onDeleteGoal={onDeleteGoal}
+        onDeleteKR={onDeleteKR}
+        onDuplicateGoal={onDuplicateGoal}
+        onDuplicateKR={onDuplicateKR}
+      />
 
-        {/* Dialogs */}
-        <CreateGoalDialog
-          open={goalDialogOpen}
-          value={newGoalTitle}
-          onChange={setNewGoalTitle}
-          onClose={() => setGoalDialogOpen(false)}
-          onSubmit={handleCreateGoal}
-        />
+      {/* Dialogs */}
+      <CreateGoalDialog
+        open={goalDialogOpen}
+        value={newGoalTitle}
+        onChange={setNewGoalTitle}
+        onClose={() => setGoalDialogOpen(false)}
+        onSubmit={handleCreateGoal}
+      />
 
-        <CreateKrDialog
-          open={krDialogOpen}
-          value={newKrTitle}
-          onChange={setNewKrTitle}
-          onClose={() => setKrDialogOpen(false)}
-          onSubmit={handleCreateKr}
-        />
-      </CardContent>
-    </Card>
+      <CreateKrDialog
+        open={krDialogOpen}
+        value={newKrTitle}
+        onChange={setNewKrTitle}
+        onClose={() => setKrDialogOpen(false)}
+        onSubmit={handleCreateKr}
+      />
+    </>
   );
 };
 

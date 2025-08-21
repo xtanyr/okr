@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TextField, Select, MenuItem, IconButton, useTheme, useMediaQuery, Box, CircularProgress, Menu } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -13,7 +13,7 @@ interface KeyResultRowProps {
   editValue: string | number | null;
   archived: boolean;
   onEditCell: (krId: string, field: keyof KeyResult, value: any) => void;
-  onSaveCell: (kr: KeyResult, field: keyof KeyResult) => void;
+  onSaveCell: (kr: KeyResult, field: keyof KeyResult, newValue?: any) => void;
   onDuplicateKR: (krId: string) => void;
   onDeleteKR: (krId: string) => void;
   setEditValue: (v: any) => void;
@@ -35,7 +35,7 @@ interface KeyResultRowProps {
   showWeeklyMonitoring?: boolean;
 }
 
-const METRICS = ['%', 'Рубли', 'Штуки'];
+const METRICS = ['%', 'Рубли', 'Штуки', 'другое'];
 // FORMULAS больше не нужен
 
 const rowStyle: React.CSSProperties = {
@@ -45,7 +45,7 @@ const rowStyle: React.CSSProperties = {
   verticalAlign: 'middle',
   height: 36,
   minHeight: 36,
-  fontFamily: 'Inter, Roboto, Arial, sans-serif',
+  fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   transition: 'background 0.2s, opacity 0.3s',
 };
 const tdStyle: React.CSSProperties = {
@@ -84,9 +84,9 @@ const numberStyle: React.CSSProperties = {
 const titleStyle: React.CSSProperties = { 
   ...tdStyle, 
   textAlign: 'left', 
-  width: '180px', 
-  minWidth: '180px', 
-  maxWidth: '180px',
+  width: 'auto', 
+  minWidth: '160px', 
+  maxWidth: 'none',
   whiteSpace: 'normal',
   wordWrap: 'break-word',
   overflowWrap: 'break-word',
@@ -187,14 +187,14 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
 
   // Адаптивные стили для мобильных устройств
   const adaptiveStyles = {
-    progress: { ...progressStyle, width: isMobile ? '36px' : '44px', minWidth: isMobile ? '36px' : '44px', maxWidth: isMobile ? '36px' : '44px', fontSize: isMobile ? 10 : 11, padding: '2px 1px' },
-    number: { ...numberStyle, width: isMobile ? '20px' : '28px', minWidth: isMobile ? '20px' : '28px', maxWidth: isMobile ? '20px' : '28px', fontSize: isMobile ? 10 : 11, padding: '2px 1px' },
+    progress: { ...progressStyle, width: isMobile ? '36px' : '44px', minWidth: isMobile ? '36px' : '44px', maxWidth: isMobile ? '36px' : '44px', fontSize: isMobile ? 12 : 13, padding: '2px 1px' },
+    number: { ...numberStyle, width: isMobile ? '20px' : '28px', minWidth: isMobile ? '20px' : '28px', maxWidth: isMobile ? '20px' : '28px', fontSize: isMobile ? 12 : 13, padding: '2px 1px' },
     title: { 
       ...titleStyle, 
-      width: isMobile ? '180px' : '180px', 
-      minWidth: isMobile ? '180px' : '450px', 
-      maxWidth: isMobile ? '180px' : '450px', 
-      fontSize: isMobile ? 11 : 12,
+      width: 'auto', 
+      minWidth: isMobile ? '160px' : '400px', 
+      maxWidth: 'none', 
+      fontSize: isMobile ? 13 : 14,
       WebkitLineClamp: isMobile ? 3 : 4,
       lineHeight: '1.3',  
       padding: isMobile ? '4px 4px' : '4px 4px',
@@ -205,7 +205,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '32px' : '40px', 
       minWidth: isMobile ? '32px' : '40px', 
       maxWidth: isMobile ? '32px' : '40px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
@@ -217,7 +217,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '32px' : '40px', 
       minWidth: isMobile ? '32px' : '40px', 
       maxWidth: isMobile ? '32px' : '40px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
@@ -229,7 +229,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '32px' : '40px', 
       minWidth: isMobile ? '32px' : '40px', 
       maxWidth: isMobile ? '32px' : '40px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
@@ -241,7 +241,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '32px' : '40px', 
       minWidth: isMobile ? '32px' : '40px', 
       maxWidth: isMobile ? '32px' : '40px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
@@ -254,7 +254,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '60px' : '80px', 
       minWidth: isMobile ? '60px' : '80px', 
       maxWidth: isMobile ? '60px' : '80px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px'
     },
     comment: { 
@@ -262,7 +262,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       width: isMobile ? '80px' : '100px', 
       minWidth: isMobile ? '80px' : '100px', 
       maxWidth: isMobile ? '80px' : '100px', 
-      fontSize: isMobile ? 10 : 11,
+      fontSize: isMobile ? 12 : 13,
       padding: '2px 1px'
     },
     action: { ...actionStyle, width: isMobile ? '40px' : '50px', minWidth: isMobile ? '40px' : '50px', maxWidth: isMobile ? '40px' : '50px' },
@@ -273,6 +273,15 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
   const [loadingField, setLoadingField] = useState<keyof KeyResult | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(menuAnchor);
+  // Auto-open metric Select when entering edit mode
+  const [metricOpen, setMetricOpen] = useState(false);
+  useEffect(() => {
+    if (editKR?.krId === kr.id && editKR.field === 'metric') {
+      setMetricOpen(true);
+    } else {
+      setMetricOpen(false);
+    }
+  }, [editKR, kr.id]);
 
   // Универсальный обработчик изменения
   const handleChange = (field: keyof KeyResult, value: any) => {
@@ -280,15 +289,15 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
     setEditValue(value);
   };
   // Универсальный обработчик сохранения
-  const handleSave = async (field: keyof KeyResult) => {
+  const handleSave = async (field: keyof KeyResult, value?: any) => {
     setLoadingField(field);
-    await onSaveCell(kr, field);
+    await onSaveCell(kr, field, value);
     setLoadingField(null);
     setLocalValue(null);
   };
 
   return (
-    <tr style={{
+    <tr data-kr-id={kr.id} style={{
       ...rowStyle,
       opacity: loading ? 0.6 : 1,
       background: loading ? '#f3f4f6' : rowStyle.background,
@@ -315,36 +324,34 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             size="small"
             fullWidth
             multiline
-            variant="outlined"
+            minRows={1}
+            variant="standard"
             sx={{ 
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: '#fff',
-                '&:hover:not(.Mui-disabled)': {
-                  borderColor: '#1565c0',
-                  backgroundColor: '#f8fafc'
-                },
-                '&.Mui-focused': {
-                  borderColor: '#1976d2',
-                  boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
-                },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: 'rgba(0, 0, 0, 0.23)'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#1976d2',
-                  borderWidth: '1px'
-                },
+              '& .MuiInputBase-root': {
+                p: 0,
+                alignItems: 'flex-start',
+                backgroundColor: 'transparent',
+                border: '1px solid transparent',
+                borderRadius: 1,
+                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontSize: isMobile ? 13 : 14,
+                lineHeight: 1.3,
+                fontWeight: 500,
+                '&:hover': { borderColor: '#e0e0e0' },
               },
               '& .MuiInputBase-input': {
-                padding: '8px',
-                fontSize: isMobile ? 12 : 14,
-                lineHeight: 1.4,
+                padding: '4px 2px 4px 2px',
+                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontSize: 'inherit',
+                fontWeight: 'inherit',
+                lineHeight: 'inherit',
                 whiteSpace: 'pre-wrap',
-                overflowWrap: 'break-word',
+                overflowWrap: 'break-word'
               },
             }}
             disabled={archived || loadingField === 'title'}
             InputProps={{ 
+              disableUnderline: true, 
               endAdornment: loadingField === 'title' ? (
                 <CircularProgress size={16} sx={{ mr: 1, mt: 1, alignSelf: 'flex-start' }} />
               ) : null,
@@ -360,6 +367,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               alignItems: 'center',
               padding: '8px 12px',
               borderRadius: 1,
+              border: '1px solid transparent',
               transition: 'all 0.2s',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -369,7 +377,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               WebkitBoxOrient: 'vertical',
               '&:hover': !archived && !readOnly ? {
                 backgroundColor: '#f5f5f5',
-                border: '1px solid #e0e0e0'
+                borderColor: '#e0e0e0'
               } : {}
             }}
           >
@@ -382,8 +390,10 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
         {editKR?.krId === kr.id && editKR.field === 'metric' ? (
           <Select
             value={localValue !== null ? localValue : editValue}
-            onChange={e => handleChange('metric', e.target.value)}
-            onBlur={() => handleSave('metric')}
+            onChange={e => { const val = e.target.value; handleChange('metric', val); handleSave('metric', val); setMetricOpen(false); }}
+            open={metricOpen}
+            onOpen={() => setMetricOpen(true)}
+            onClose={() => setMetricOpen(false)}
             autoFocus
             size="small"
             variant="outlined"
@@ -393,7 +403,8 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 backgroundColor: '#fff',
                 border: '2px solid #1976d2',
                 borderRadius: 1,
-                fontSize: 14,
+                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: 500,
                 '&:hover': {
                   borderColor: '#1565c0'
@@ -409,11 +420,12 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               '& .MuiSelect-select': {
                 textAlign: 'center' as const,
                 padding: '8px 4px',
-                fontSize: 14,
+                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontSize: isMobile ? 12 : 13,
                 fontWeight: 500
               }
             }}
-            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 80 } } }}
+            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 80, '& .MuiMenuItem-root': { fontSize: isMobile ? 12 : 13, fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" } } } }}
             disabled={archived || loadingField === 'metric'}
           >
             {METRICS.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
@@ -451,17 +463,26 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('base')}
             autoFocus
             size="small"
+            variant="standard"
             sx={{ 
               width: '100%',
-              '& .MuiOutlinedInput-input': {
+              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                WebkitAppearance: 'none',
+                margin: 0,
+              },
+              '& input[type=number]': {
+                MozAppearance: 'textfield',
+              },
+              '& .MuiInputBase-input': {
                 textAlign: 'center' as const,
-                padding: '4px 8px',
-                fontSize: isMobile ? 12 : 14,
+                padding: '2px 4px',
+                fontSize: isMobile ? 12 : 13,
                 height: 'auto',
               },
             }}
             disabled={archived || loadingField === 'base'}
             InputProps={{ 
+              disableUnderline: true,
               endAdornment: loadingField === 'base' ? <CircularProgress size={16} /> : null,
               sx: { height: 'auto' }
             }}
@@ -502,17 +523,26 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
             onBlur={() => handleSave('plan')}
             autoFocus
             size="small"
+            variant="standard"
             sx={{ 
               width: '100%',
-              '& .MuiOutlinedInput-input': {
+              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                WebkitAppearance: 'none',
+                margin: 0,
+              },
+              '& input[type=number]': {
+                MozAppearance: 'textfield',
+              },
+              '& .MuiInputBase-input': {
                 textAlign: 'center' as const,
-                padding: '4px 8px',
-                fontSize: isMobile ? 12 : 14,
+                padding: '2px 4px',
+                fontSize: isMobile ? 12 : 13,
                 height: 'auto',
               },
             }}
             disabled={archived || loadingField === 'plan'}
             InputProps={{ 
+              disableUnderline: true,
               endAdornment: loadingField === 'plan' ? <CircularProgress size={16} /> : null,
               sx: { height: 'auto' }
             }}
@@ -582,6 +612,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                   padding: '4px 2px',
                   textAlign: 'center' as const,
                   height: 'auto',
+                  fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 },
               }}
               inputProps={{ 

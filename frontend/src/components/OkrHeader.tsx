@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Switch, FormControlLabel, Menu, ListItemIcon, ListItemText, Divider, IconButton } from '@mui/material';
+import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Switch, FormControlLabel, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
+import UserAvatar from './UserAvatar';
 import { useState, useRef } from 'react';
 import axios from 'axios';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -150,6 +151,9 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
 
   return (
     <Box display="flex" alignItems="center" gap={3} mb={4}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+        <UserAvatar size={48} />
+      </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <FormControl sx={{ minWidth: 200 }}>
           <InputLabel id="user-select-label">Пользователь</InputLabel>
@@ -192,28 +196,36 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
             borderRadius: 1.5,
             px: 1.5,
             py: 0.75,
-            minWidth: 140
+            gap: 1.5
           }}>
-            <Box sx={{ width: '100%', mr: 1 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary">Прогресс</Typography>
-                <Typography variant="caption" fontWeight="medium">{overallProgress}%</Typography>
-              </Box>
-              <Box sx={{ 
-                height: 8, 
-                bgcolor: '#e5e7eb', 
-                borderRadius: 4,
-                overflow: 'hidden'
+            <Box sx={{ position: 'relative', width: 48, height: 48 }}>
+              <CircularProgress variant="determinate" value={100} size={48} thickness={5} sx={{ color: '#e5e7eb' }} />
+              <CircularProgress
+                variant="determinate"
+                value={overallProgress}
+                size={48}
+                thickness={5}
+                sx={{
+                  color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                  position: 'absolute',
+                  left: 0
+                }}
+              />
+              <Box sx={{
+                top: 0, left: 0, bottom: 0, right: 0,
+                position: 'absolute',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 700,
+                fontSize: 14,
+                color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
               }}>
-                <Box 
-                  sx={{ 
-                    height: '100%', 
-                    backgroundColor: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
-                    width: `${overallProgress}%`,
-                    transition: 'width 0.3s ease-in-out'
-                  }}
-                />
+                {overallProgress}%
               </Box>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Прогресс</Typography>
             </Box>
           </Box>
         )}
