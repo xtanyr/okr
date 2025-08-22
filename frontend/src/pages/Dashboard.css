@@ -1,24 +1,89 @@
+/* Mobile-first responsive styles */
+.dashboard-container {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Drag and drop styles */
 .droppable-zone {
   transition: background 0.2s;
 }
+
 .droppable-zone.dragging-over {
   background: #e3f2fd;
   border-radius: 12px;
 }
+
 .droppable-zone.archived-droppable {
   background: #f3f4f6;
   cursor: not-allowed;
   opacity: 0.7;
 }
+
 .draggable-item {
   transition: box-shadow 0.2s, background 0.2s;
 }
+
 .draggable-item.dragging {
   box-shadow: 0 4px 16px 0 rgba(33, 150, 243, 0.18), 0 1.5px 6px 0 rgba(33, 150, 243, 0.12);
   background: #e3f2fd;
   border-radius: 12px;
 }
+
 .draggable-item.archived-draggable {
   cursor: not-allowed;
   opacity: 0.7;
-} 
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 0;
+  }
+  
+  /* Ensure tables are scrollable on mobile */
+  .mobile-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Compact spacing for mobile */
+  .mobile-compact {
+    padding: 8px !important;
+    margin: 4px 0 !important;
+  }
+  
+  /* Hide less important elements on very small screens */
+  @media (max-width: 480px) {
+    .hide-on-mobile {
+      display: none !important;
+    }
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-container {
+    padding: 0 16px;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1025px) {
+  .dashboard-container {
+    padding: 0 24px;
+  }
+}
+
+/* Touch-friendly interactive elements */
+@media (hover: none) and (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .draggable-item {
+    padding: 12px;
+  }
+}

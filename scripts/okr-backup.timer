@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly OKR Database Backup
+Requires=okr-backup.service
+
+[Timer]
+Unit=okr-backup.service
+OnCalendar=Sun *-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

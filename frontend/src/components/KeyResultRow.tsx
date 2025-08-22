@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TextField, Select, MenuItem, IconButton, useTheme, useMediaQuery, Box, CircularProgress, Menu } from '@mui/material';
+import { TextField, Select, MenuItem, IconButton, useTheme, useMediaQuery, Box, CircularProgress, Menu, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -294,6 +294,25 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
     await onSaveCell(kr, field, value);
     setLoadingField(null);
     setLocalValue(null);
+  };
+
+  const handleDeleteClick = () => {
+    setShowConfirmDelete(true);
+    setMenuAnchor(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onDeleteKR(kr.id);
+    } finally {
+      setIsDeleting(false);
+      setShowConfirmDelete(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowConfirmDelete(false);
   };
 
   return (
@@ -657,13 +676,49 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
 
       {/* Действия: меню три точки */}
       <td style={adaptiveStyles.action}>
-        <IconButton
-          onClick={e => setMenuAnchor(e.currentTarget)}
-          disabled={archived || readOnly}
-          aria-label="Действия KR"
+        {!archived && !readOnly && (
+          <IconButton 
+            size="small" 
+            onClick={handleDeleteClick}
+            disabled={loading || isDeleting}
+            sx={{ 
+              color: 'black',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              }
+            }}
+          >
+            {isDeleting ? <CircularProgress size={20} /> : <DeleteIcon fontSize="small" />}
+          </IconButton>
+        )}
+        
+        <Dialog
+          open={showConfirmDelete}
+          onClose={handleCancelDelete}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
         >
-          <MoreVertIcon />
-        </IconButton>
+          <DialogTitle id="alert-dialog-title">Подтверждение удаления</DialogTitle>
+          <DialogContent>
+            <DialogContentText id="alert-dialog-description">
+              Вы уверены, что хотите удалить ключевой результат "{kr.title}"? Это действие нельзя отменить.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCancelDelete} disabled={isDeleting}>
+              Отмена
+            </Button>
+            <Button 
+              onClick={handleConfirmDelete} 
+              color="error" 
+              autoFocus
+              disabled={isDeleting}
+              startIcon={isDeleting ? <CircularProgress size={20} color="inherit" /> : null}
+            >
+              {isDeleting ? 'Удаление...' : 'Удалить'}
+            </Button>
+          </DialogActions>
+        </Dialog>
         <Menu
           anchorEl={menuAnchor}
           open={menuOpen}

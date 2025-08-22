@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import PrivateRoute from './components/PrivateRoute';
 import AuthRedirect from './components/AuthRedirect';
 import Dashboard from './pages/Dashboard';
@@ -14,6 +16,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
         <Route path="/register" element={<AuthRedirect><Register /></AuthRedirect>} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route element={<PrivateRoute />}>
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />

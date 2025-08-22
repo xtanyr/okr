@@ -150,129 +150,241 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
   };
 
   return (
-    <Box display="flex" alignItems="center" gap={3} mb={4}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
-        <UserAvatar size={48} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel id="user-select-label">Пользователь</InputLabel>
-          <Select
-            labelId="user-select-label"
-            id="user-select"
-            value={selectedUserId}
-            label="Пользователь"
-            onChange={(e) => onUserChange(e.target.value)}
+    <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+      {/* Mobile Layout */}
+      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+        {/* First Row: Avatar + Menu Button */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <UserAvatar size={40} />
+          </Box>
+          <IconButton
+            onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
+            disabled={!selectedOkrId}
+            aria-label="Действия с OKR"
+            size="large"
           >
-            {users.map((user) => (
-              <MenuItem key={user.id} value={user.id}>
-                {user.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-      
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <FormControl size="small" sx={{ minWidth: 200 }}>
-          <InputLabel id="okr-label">OKR (Период)</InputLabel>
-          <Select
-            labelId="okr-label"
-            value={selectedOkrId}
-            label="OKR (Период)"
-            onChange={e => onOkrChange(e.target.value)}
-          >
-            {okrs.map(o => (
-              <MenuItem key={o.id} value={o.id}>{o.period}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        
-        {overallProgress !== undefined && selectedOkrId && (
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            bgcolor: '#f3f4f6',
-            borderRadius: 1.5,
-            px: 1.5,
-            py: 0.75,
-            gap: 1.5
-          }}>
-            <Box sx={{ position: 'relative', width: 48, height: 48 }}>
-              <CircularProgress variant="determinate" value={100} size={48} thickness={5} sx={{ color: '#e5e7eb' }} />
-              <CircularProgress
-                variant="determinate"
-                value={overallProgress}
-                size={48}
-                thickness={5}
-                sx={{
-                  color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+            <MoreVertIcon />
+          </IconButton>
+        </Box>
+
+        {/* Second Row: User Select */}
+        <Box sx={{ mb: 2 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="user-select-label-mobile">Пользователь</InputLabel>
+            <Select
+              labelId="user-select-label-mobile"
+              id="user-select-mobile"
+              value={selectedUserId}
+              label="Пользователь"
+              onChange={(e) => onUserChange(e.target.value)}
+            >
+              {users.map((user) => (
+                <MenuItem key={user.id} value={user.id}>
+                  {user.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* Third Row: OKR Select */}
+        <Box sx={{ mb: 2 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="okr-label-mobile">OKR (Период)</InputLabel>
+            <Select
+              labelId="okr-label-mobile"
+              value={selectedOkrId}
+              label="OKR (Период)"
+              onChange={e => onOkrChange(e.target.value)}
+            >
+              {okrs.map(o => (
+                <MenuItem key={o.id} value={o.id}>{o.period}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        {/* Fourth Row: Progress + Weekly Monitoring Toggle */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          {overallProgress !== undefined && selectedOkrId && (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#f3f4f6',
+              borderRadius: 1.5,
+              px: 1.5,
+              py: 0.75,
+              gap: 1
+            }}>
+              <Box sx={{ position: 'relative', width: 36, height: 36 }}>
+                <CircularProgress variant="determinate" value={100} size={36} thickness={5} sx={{ color: '#e5e7eb' }} />
+                <CircularProgress
+                  variant="determinate"
+                  value={overallProgress}
+                  size={36}
+                  thickness={5}
+                  sx={{
+                    color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                    position: 'absolute',
+                    left: 0
+                  }}
+                />
+                <Box sx={{
+                  top: 0, left: 0, bottom: 0, right: 0,
                   position: 'absolute',
-                  left: 0
-                }}
-              />
-              <Box sx={{
-                top: 0, left: 0, bottom: 0, right: 0,
-                position: 'absolute',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: 14,
-                color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
-              }}>
-                {overallProgress}%
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 12,
+                  color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                }}>
+                  {overallProgress}%
+                </Box>
               </Box>
-            </Box>
-            <Box>
               <Typography variant="caption" color="text.secondary">Прогресс</Typography>
             </Box>
-          </Box>
-        )}
+          )}
+          
+          <FormControlLabel
+            control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} size="small" />}
+            label={<Typography variant="caption">Недельный мониторинг</Typography>}
+            sx={{
+              '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 },
+              m: 0
+            }}
+          />
+        </Box>
       </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
-        <FormControlLabel
-          control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} />}
-          label="Недельный мониторинг"
-          sx={{ mr: 1, '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 } }}
-        />
-        <IconButton
-          onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
-          disabled={!selectedOkrId}
-          aria-label="Действия с OKR"
-          size="large"
-        >
-          <MoreVertIcon />
-        </IconButton>
-        <Menu
-          anchorEl={menuAnchorEl}
-          open={Boolean(menuAnchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => setOpen(true)}>
-            <ListItemIcon>
-              <ContentCopyIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>Создать OKR</ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={() => selectedOkr.current && handleArchiveOkr(!selectedOkr.current.archived)} disabled={archiving || !selectedOkr.current}>
-            <ListItemIcon>
-              {selectedOkr.current?.archived ? <UnarchiveIcon fontSize="small" /> : <ArchiveIcon fontSize="small" />}
-            </ListItemIcon>
-            <ListItemText>
-              {selectedOkr.current?.archived ? 'Разархивировать' : 'Архивировать'}
-            </ListItemText>
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={() => setDeleteDialogOpen(true)} disabled={deleting || !selectedOkr.current}>
-            <ListItemIcon>
-              <DeleteIcon fontSize="small" color="error" />
-            </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ color: 'error.main' }}>Удалить OKR</ListItemText>
-          </MenuItem>
-        </Menu>
+
+      {/* Desktop Layout */}
+      <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 3 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+          <UserAvatar size={48} />
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel id="user-select-label">Пользователь</InputLabel>
+            <Select
+              labelId="user-select-label"
+              id="user-select"
+              value={selectedUserId}
+              label="Пользователь"
+              onChange={(e) => onUserChange(e.target.value)}
+            >
+              {users.map((user) => (
+                <MenuItem key={user.id} value={user.id}>
+                  {user.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel id="okr-label">OKR (Период)</InputLabel>
+            <Select
+              labelId="okr-label"
+              value={selectedOkrId}
+              label="OKR (Период)"
+              onChange={e => onOkrChange(e.target.value)}
+            >
+              {okrs.map(o => (
+                <MenuItem key={o.id} value={o.id}>{o.period}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          
+          {overallProgress !== undefined && selectedOkrId && (
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#f3f4f6',
+              borderRadius: 1.5,
+              px: 1.5,
+              py: 0.75,
+              gap: 1.5
+            }}>
+              <Box sx={{ position: 'relative', width: 48, height: 48 }}>
+                <CircularProgress variant="determinate" value={100} size={48} thickness={5} sx={{ color: '#e5e7eb' }} />
+                <CircularProgress
+                  variant="determinate"
+                  value={overallProgress}
+                  size={48}
+                  thickness={5}
+                  sx={{
+                    color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                    position: 'absolute',
+                    left: 0
+                  }}
+                />
+                <Box sx={{
+                  top: 0, left: 0, bottom: 0, right: 0,
+                  position: 'absolute',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
+                }}>
+                  {overallProgress}%
+                </Box>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Прогресс</Typography>
+              </Box>
+            </Box>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
+          <FormControlLabel
+            control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} />}
+            label="Недельный мониторинг"
+            sx={{ mr: 1, '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 } }}
+          />
+          <IconButton
+            onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
+            disabled={!selectedOkrId}
+            aria-label="Действия с OKR"
+            size="large"
+          >
+            <MoreVertIcon />
+          </IconButton>
+        </Box>
       </Box>
+
+      {/* Shared Menu */}
+      <Menu
+        anchorEl={menuAnchorEl}
+        open={Boolean(menuAnchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={() => setOpen(true)}>
+          <ListItemIcon>
+            <ContentCopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Создать OKR</ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => selectedOkr.current && handleArchiveOkr(!selectedOkr.current.archived)} disabled={archiving || !selectedOkr.current}>
+          <ListItemIcon>
+            {selectedOkr.current?.archived ? <UnarchiveIcon fontSize="small" /> : <ArchiveIcon fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>
+            {selectedOkr.current?.archived ? 'Разархивировать' : 'Архивировать'}
+          </ListItemText>
+        </MenuItem>
+        <Divider />
+        <MenuItem onClick={() => setDeleteDialogOpen(true)} disabled={deleting || !selectedOkr.current}>
+          <ListItemIcon>
+            <DeleteIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText primaryTypographyProps={{ color: 'error.main' }}>Удалить OKR</ListItemText>
+        </MenuItem>
+      </Menu>
       <Dialog open={open} onClose={() => { setOpen(false); setError(null); }}>
         <DialogTitle>Создание OKR</DialogTitle>
         <DialogContent>

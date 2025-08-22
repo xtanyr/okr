@@ -4,7 +4,7 @@ import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
 import axios from 'axios';
-import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatQuote, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
+import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -74,10 +74,24 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   const editorRef = React.useRef<HTMLDivElement | null>(null);
   const [commentViewKrId, setCommentViewKrId] = React.useState<string | null>(null);
   const [rowHeights, setRowHeights] = React.useState<{ [id: string]: number }>({});
-  // Инициализировать содержимое редактора комментария только при открытии, чтобы не сбивался карет
+  // Handle editor content changes
   React.useEffect(() => {
     if (commentEditorKrId && editorRef.current) {
-      editorRef.current.innerHTML = commentHtml || '';
+      // Save current selection before updating content
+      saveSelection();
+      
+      const currentContent = editorRef.current.innerHTML;
+      // Only update if content actually changed to avoid cursor jumps
+      if (currentContent !== commentHtml) {
+        editorRef.current.innerHTML = commentHtml || '';
+      }
+      
+      // Restore selection after content update
+      requestAnimationFrame(() => {
+        if (editorRef.current) {
+          restoreSelection();
+        }
+      });
     }
   }, [commentEditorKrId, commentHtml]);
 
@@ -546,26 +560,72 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
 
 
 
-  // Open rich text comment editor for a KR
-  const openCommentEditor = (kr: KeyResult) => {
-    // Сначала устанавливаем содержимое комментария, затем открываем редактор,
-    // чтобы useEffect при открытии подхватил корректный текст
-    setCommentHtml(kr.comment || '');
-    setCommentEditorKrId(kr.id);
-    setTimeout(() => {
-      if (editorRef.current) {
-        editorRef.current.innerHTML = (kr.comment || '');
-        editorRef.current.focus();
-        const range = document.createRange();
-        range.selectNodeContents(editorRef.current);
-        range.collapse(false);
-        const sel = window.getSelection();
-        if (sel) {
-          sel.removeAllRanges();
-          sel.addRange(range);
+  // Ref to store the last selection range
+  const lastSelection = React.useRef<Range | null>(null);
+
+  // Save selection when it changes
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      lastSelection.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  // Restore the saved selection
+  const restoreSelection = () => {
+    if (lastSelection.current && editorRef.current) {
+      const selection = window.getSelection();
+      if (selection) {
+        try {
+          selection.removeAllRanges();
+          selection.addRange(lastSelection.current);
+        } catch (e) {
+          // If restoring fails, set cursor to end as fallback
+          const range = document.createRange();
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
         }
       }
-    }, 0);
+    } else if (editorRef.current) {
+      // If no saved selection, set cursor to end
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  };
+
+  // Open rich text comment editor for a KR
+  const openCommentEditor = (kr: KeyResult) => {
+    setCommentEditorKrId(kr.id);
+    setCommentHtml(kr.comment || '');
+    
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        // Save current selection before updating content
+        saveSelection();
+        
+        // Update content
+        const currentContent = editorRef.current.innerHTML;
+        const newContent = kr.comment || '';
+        
+        // Only update if content actually changed to avoid cursor jumps
+        if (currentContent !== newContent) {
+          editorRef.current.innerHTML = newContent;
+        }
+        
+        // Restore focus and selection
+        editorRef.current.focus();
+        restoreSelection();
+      }
+    });
   };
 
   const openCommentView = (kr: KeyResult) => {
@@ -785,13 +845,25 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               overflowX: 'auto',
               border: '1px solid #e5e7eb',
               borderRadius: '8px',
-              backgroundColor: '#fff'
+              backgroundColor: '#fff',
+              WebkitOverflowScrolling: 'touch',
+              '&::-webkit-scrollbar': {
+                height: '6px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f1f1',
+                borderRadius: '3px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#c1c1c1',
+                borderRadius: '3px',
+              }
             }}>
-              <table style={{ 
+              <table style={{
                 width: 'max-content',
-                minWidth: '100%',
-                borderCollapse: 'separate', 
-                borderSpacing: 0, 
+                minWidth: isMobile ? '400px' : '100%',
+                borderCollapse: 'separate',
+                borderSpacing: 0,
                 background: '#fff',
                 tableLayout: 'auto'
               }}>
@@ -1091,8 +1163,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           <Tooltip title="Зачеркнутый"><span><IconButton size="small" onClick={() => document.execCommand('strikeThrough')}><StrikethroughS fontSize="small" /></IconButton></span></Tooltip>
           <Tooltip title="Нумерованный список"><span><IconButton size="small" onClick={() => document.execCommand('insertOrderedList')}><FormatListNumbered fontSize="small" /></IconButton></span></Tooltip>
           <Tooltip title="Маркированный список"><span><IconButton size="small" onClick={() => document.execCommand('insertUnorderedList')}><FormatListBulleted fontSize="small" /></IconButton></span></Tooltip>
-                                        <Tooltip title="Цитата"><span><IconButton size="small" onClick={() => document.execCommand('formatBlock', false, 'BLOCKQUOTE')}><FormatQuote fontSize="small" /></IconButton></span></Tooltip>
-                                        <Tooltip title="Ссылка"><span><IconButton size="small" onClick={() => { const input = prompt('Введите URL'); if (input) { const url = ensureExternalUrl(input); document.execCommand('createLink', false, url); setSelectionLinkAttrs(); } }}><LinkIcon fontSize="small" /></IconButton></span></Tooltip>
+          <Tooltip title="Ссылка"><span><IconButton size="small" onClick={() => { const input = prompt('Введите URL'); if (input) { const url = ensureExternalUrl(input); document.execCommand('createLink', false, url); setSelectionLinkAttrs(); } }}><LinkIcon fontSize="small" /></IconButton></span></Tooltip>
           <Tooltip title="Удалить ссылку"><span><IconButton size="small" onClick={() => document.execCommand('unlink')}><LinkOff fontSize="small" /></IconButton></span></Tooltip>
                     <Tooltip title="Очистить форматирование"><span><IconButton size="small" onClick={() => document.execCommand('removeFormat')}><FormatClear fontSize="small" /></IconButton></span></Tooltip>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>

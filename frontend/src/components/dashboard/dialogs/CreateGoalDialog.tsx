@@ -25,7 +25,7 @@ const CreateGoalDialog: React.FC<CreateGoalDialogProps> = ({ open, value, onChan
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Отмена</Button>
-        <Button variant="contained" onClick={onSubmit} disabled={!value.trim()}>Со��дать</Button>
+        <Button variant="contained" onClick={onSubmit} disabled={!value.trim()}>Создать</Button>
       </DialogActions>
     </Dialog>
   );

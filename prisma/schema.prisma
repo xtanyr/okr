@@ -14,13 +14,18 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
-  role      Role     @default(USER)
-  okrs      OKR[]
+  id                String   @id @default(uuid())
+  email             String   @unique
+  password          String
+  firstName         String
+  lastName          String
+  role              Role     @default(USER)
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  okrs              OKR[]
+  
+  @@index([resetToken])
+  @@index([resetTokenExpiry])
 }
 
 enum Role {
@@ -72,4 +77,17 @@ model WeeklyMonitoringEntry {
   value        Float
 
   @@unique([keyResultId, weekNumber])
+}
+
+model BackupLog {
+  id        String   @id @default(uuid())
+  type      String   // 'scheduled' or 'manual'
+  status    String   // 'completed' or 'failed'
+  filePath  String?  // Path to the backup file
+  error     String?  // Error message if status is 'failed'
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
 }

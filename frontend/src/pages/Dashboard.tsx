@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Box, Grid, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { Box, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 import axios from 'axios';
 import OkrHeader from '../components/OkrHeader';
 import EmptyState from '../components/dashboard/EmptyState';
@@ -97,20 +97,41 @@ const Dashboard = () => {
     if (!okr?.goals?.length) return 0;
     
     const goalProgresses: number[] = [];
-    const debugInfo: {goal: string, progress: number, keyResults: Array<{title: string, progress: number}>}[] = [];
+    const debugInfo: Array<{goal: string, progress: number, keyResults: Array<{title: string, progress: number}>}> = [];
     
     // Calculate progress for each goal
     okr.goals.forEach(goal => {
-      if (!goal.keyResults?.length) return;
+      let goalProgress = 0;
+      const keyResultsDebug: Array<{title: string, progress: number}> = [];
+      
+      // If goal has no key results, it counts as 0% progress
+      if (!goal.keyResults?.length) {
+        goalProgresses.push(0);
+        debugInfo.push({
+          goal: goal.title,
+          progress: 0,
+          keyResults: []
+        });
+        return;
+      }
       
       let goalTotalProgress = 0;
       let validKeyResults = 0;
-      const keyResultsDebug: Array<{title: string, progress: number}> = [];
+      let hasKeyResultsWithPlan = false;
       
       // Calculate average progress for this goal's key results
       goal.keyResults.forEach(kr => {
-        // Skip if plan is 0 to avoid division by zero
-        if (kr.plan === 0) return;
+        // If plan is 0, count as 0% progress for this key result
+        if (kr.plan === 0) {
+          keyResultsDebug.push({
+            title: kr.title,
+            progress: 0
+          });
+          goalTotalProgress += 0;
+          validKeyResults++;
+          hasKeyResultsWithPlan = true;
+          return;
+        }
         
         // Calculate progress for this key result (0-100%)
         let progress = (kr.fact / kr.plan) * 100;
@@ -124,20 +145,24 @@ const Dashboard = () => {
           });
           goalTotalProgress += progress;
           validKeyResults++;
+          hasKeyResultsWithPlan = true;
         }
       });
       
       // Calculate average progress for this goal
-      if (validKeyResults > 0) {
-        const goalProgress = goalTotalProgress / validKeyResults;
-        goalProgresses.push(goalProgress);
-        
-        debugInfo.push({
-          goal: goal.title,
-          progress: goalProgress,
-          keyResults: keyResultsDebug
-        });
+      if (hasKeyResultsWithPlan) {
+        goalProgress = validKeyResults > 0 ? goalTotalProgress / validKeyResults : 0;
+      } else {
+        // If no key results with plan > 0, count as 0% progress
+        goalProgress = 0;
       }
+      
+      goalProgresses.push(goalProgress);
+      debugInfo.push({
+        goal: goal.title,
+        progress: goalProgress,
+        keyResults: keyResultsDebug
+      });
     });
     
     // Calculate overall progress as average of goal progresses
@@ -410,7 +435,6 @@ const Dashboard = () => {
       alert('Нельзя удалять цели из архивного OKR');
       return;
     }
-    if (!window.confirm('Вы уверены, что хотите удалить эту цель и все её ключевые результаты?')) return;
     try {
       await axios.delete(`/okr/${selectedOkrId}/goal/${goalId}`);
       reloadOkrs();
@@ -532,10 +556,10 @@ const Dashboard = () => {
     try {
       await axios.post(`/okr/goal/${goalId}/keyresult`, { 
         title, 
-        metric: '',
+        metric: '%',
         base: 0,
         plan: 0,
-        formula: 'Текущее'
+        formula: 'Макс'
       });
       await reloadOkrs();
     } catch (error) {
@@ -549,7 +573,13 @@ const Dashboard = () => {
   }
 
   return (
-    <Box sx={{ width: '100%', maxWidth: '100%', px: { xs: 1, sm: 2, md: 3 }, mx: 0 }}>
+    <Box sx={{
+      width: '100%',
+      maxWidth: '100%',
+      px: 0,
+      mx: 0,
+      overflow: 'hidden'
+    }}>
       <OkrHeader
         users={users}
         selectedUserId={selectedUserId}
@@ -564,29 +594,36 @@ const Dashboard = () => {
       />
       
       <OkrTabs showArchived={showArchived} archivedCount={archivedOkrs.length} onChange={handleTabsChange} />
+      
       {!selectedOkrId || !selectedOkr ? (
-        <EmptyState 
-          showArchived={showArchived} 
-          isViewingOwnOkrs={isViewingOwnOkrs || false} 
-          onCreateClick={() => setAddDialogOpen(true)} 
-        />
+        <Box sx={{ px: { xs: 1, sm: 0 } }}>
+          <EmptyState
+            showArchived={showArchived}
+            isViewingOwnOkrs={isViewingOwnOkrs || false}
+            onCreateClick={() => setAddDialogOpen(true)}
+          />
+        </Box>
       ) : (
-        <Grid container spacing={{ xs: 1, sm: 2, md: 3 }} sx={{ width: '100%', maxWidth: '100%', margin: 0, p: 0 }}>
-          <Grid item xs={12} key={selectedOkr.id} sx={{ width: '100%', p: 0 }}>
-            <OkrDetails
-              okr={selectedOkr}
-              isViewingOwnOkrs={!!isViewingOwnOkrs}
-              showWeeklyMonitoring={showWeeklyMonitoring}
-              onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
-              onDeleteGoal={handleDeleteGoal}
-              onDeleteKR={handleDeleteKR}
-              onDuplicateGoal={handleDuplicateGoal}
-              onDuplicateKR={handleDuplicateKR}
-              onCreateGoal={createGoal}
-              onCreateKr={createKeyResult}
-            />
-          </Grid>
-        </Grid>
+        <Box sx={{
+          width: '100%',
+          px: { xs: 1, sm: 0 },
+          '& > *': {
+            width: '100%'
+          }
+        }}>
+          <OkrDetails
+            okr={selectedOkr}
+            isViewingOwnOkrs={!!isViewingOwnOkrs}
+            showWeeklyMonitoring={showWeeklyMonitoring}
+            onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
+            onDeleteGoal={handleDeleteGoal}
+            onDeleteKR={handleDeleteKR}
+            onDuplicateGoal={handleDuplicateGoal}
+            onDuplicateKR={handleDuplicateKR}
+            onCreateGoal={createGoal}
+            onCreateKr={createKeyResult}
+          />
+        </Box>
       )}
       {/* Модалка создания OKR */}
       <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
