@@ -3,7 +3,7 @@ node_modules
 .env
 
 /generated/prisma
-/.cursor
-/.superdesign
-/.qodo
-/.windsurfrules.md
+.cursor
+.superdesign
+.qodo
+.windsurfrules.md
