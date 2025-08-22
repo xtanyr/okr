@@ -4,7 +4,7 @@ import { Outlet } from 'react-router-dom';
 
 export default function Layout({ children }: { children?: React.ReactNode }) {
   return (
-    <Box sx={{ minHeight: '100vh', background: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', background: 'background.default', display: 'flex', flexDirection: 'column' }}>
       <CssBaseline />
       <Box
         component="main"
@@ -12,11 +12,15 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
           width: '100%',
           p: { xs: 1, sm: 2, md: 3 },
           maxWidth: '100vw',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column'
         }}
       >
         {children || <Outlet />}
       </Box>
+      
     </Box>
   );
 }

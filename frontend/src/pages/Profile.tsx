@@ -4,6 +4,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useUserStore, getUserAvatar } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import StarBackground from '../components/StarBackground';
 
 const Profile: React.FC = () => {
   const user = useUserStore((s) => s.user);
@@ -73,9 +74,59 @@ const Profile: React.FC = () => {
     }
   };
 
+  // Add global styles to remove default margins and padding
+  React.useEffect(() => {
+    // Add custom styles to override MUI Container padding
+    const style = document.createElement('style');
+    style.textContent = `
+      .profile-root {
+        padding: 0 !important;
+      }
+      @media (min-width: 0px) {
+        .css-1bzq6gc {
+          padding: 0 !important;
+        }
+      }
+      @media (min-width: 600px) {
+        .css-1bzq6gc {
+          padding: 0 !important;
+        }
+      }
+      @media (min-width: 900px) {
+        .css-1bzq6gc {
+          padding: 0 !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflowX = 'hidden';
+    
+    return () => {
+      document.head.removeChild(style);
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+      document.body.style.overflowX = '';
+    };
+  }, []);
+
   return (
-    <Box maxWidth={800} mx="auto" p={3} width="100%">
-      <Box maxWidth={600} mx="auto" width="100%">
+    <Box className="profile-root" sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100vh',
+      width: '100vw',
+      margin: 0,
+      padding: '0 !important',
+      '& > *': {
+        maxWidth: '100%',
+        boxSizing: 'border-box'
+      }
+    }}>
+      <Box maxWidth={800} mx="auto" p={3} width="100%" sx={{ flex: 1 }}>
+        <Box maxWidth={600} mx="auto" width="100%">
         <Box display="flex" alignItems="center" mb={4}>
           <IconButton 
             onClick={handleBack}
@@ -145,6 +196,101 @@ const Profile: React.FC = () => {
             </Stack>
           </form>
         </Paper>
+        </Box>
+      </Box>
+      
+      {/* Full-width footer with snowflakes */}
+      <Box 
+        component="footer"
+        sx={{
+          width: '100vw',
+          position: 'static',
+          margin: 0,
+          padding: 0,
+          zIndex: 1000,
+          '&::before': {
+            content: '""',
+            position: 'relative',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '2px',
+            background: 'linear-gradient(90deg, transparent, rgb(160, 216, 240), rgb(160, 216, 240), transparent)',
+            zIndex: 1002
+          },
+        }}
+      >
+        <Box 
+          sx={{
+            position: 'relative',
+            width: '100vw',
+            margin: 0,
+            padding: 0,
+            background: 'linear-gradient(135deg, rgba(255, 155, 200, 0.25), rgba(255, 200, 230, 0.15))',
+            backdropFilter: 'blur(5px)',
+            p: 3,
+            borderTop: '1px solid',
+            borderBottom: '1px solid',
+            borderColor: 'rgba(255, 200, 230, 0.4)',
+            overflow: 'hidden',
+            minHeight: '120px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            '&::after': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'radial-gradient(circle at 50% 0%, rgba(255, 200, 230, 0.25) 0%, transparent 70%)',
+              pointerEvents: 'none',
+              zIndex: 0
+            },
+          }}
+        >
+          <Box position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden" zIndex={1}>
+            <StarBackground />
+          </Box>
+          <Box position="relative" zIndex={1}>
+            <Typography 
+              variant="h6" 
+              sx={{
+                color: 'rgba(0, 0, 0, 0.9)',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                mb: 1,
+                fontSize: '1.25rem',
+                textAlign: 'center',
+                textShadow: '0 1px 3px rgba(255, 255, 255, 0.8)'
+              }}
+            >
+              xtany dev
+            </Typography>
+          </Box>
+          <Typography 
+            variant="caption" 
+            sx={{
+              display: 'block',
+              color: 'rgba(0, 0, 0, 0.7)',
+              fontSize: '0.75rem',
+              letterSpacing: '1px',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              position: 'relative',
+              textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)',
+              '&::before, &::after': {
+                content: '"✧"',
+                display: 'inline-block',
+                mx: 1,
+                color: 'rgba(0, 0, 0, 0.6)'
+              }
+            }}
+          >
+          {new Date().getFullYear()} спасибо вам
+          </Typography>
+        </Box>
       </Box>
     </Box>
   );
