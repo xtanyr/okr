@@ -24,7 +24,7 @@ const StarBackground: React.FC = () => {
     
     // Snowflake properties - enhanced for full footer
     const snowflakes: {x: number, y: number, size: number, speed: number, opacity: number, angle: number, spin: number}[] = [];
-    const flakeCount = Math.floor(window.innerWidth / 15); // More snowflakes for better coverage
+    const flakeCount = Math.floor(window.innerWidth / 28); // More snowflakes for better coverage
     
     // Create snowflakes with different layers
     for (let i = 0; i < flakeCount; i++) {
@@ -78,8 +78,8 @@ const StarBackground: React.FC = () => {
         )`;
         
         // Main branches
-        for (let i = 0; i < 6; i++) {
-          const angle = (Math.PI / 3) * i;
+        for (let i = 0; i < 12; i++) {
+          const angle = (Math.PI / 6) * i;
           
           // Draw main branch
           ctx.beginPath();

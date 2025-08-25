@@ -46,13 +46,11 @@ const FORMULAS = [
   'Сумма без базы',
 ];
 
-const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, onDuplicateKR, archived, showWeeklyMonitoring, mode = 'weeks', startDate, endDate, readOnly = false }) => {
+const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, archived, showWeeklyMonitoring, startDate, endDate, readOnly = false }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
-  const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
-  const menuOpen = Boolean(menuAnchor);
   const [editKR, setEditKR] = React.useState<{ krId: string; field: keyof KeyResult } | null>(null);
   const [editValue, setEditValue] = React.useState<any>(null);
   // Добавить состояние editTitle и editTitleValue
@@ -533,30 +531,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   };
 
   // Обновление fact у KR при изменении недельных отметок
-  const handleFactChange = async (krId: string, newFact: number) => {
-    if (archived) return;
-    const newKeyResults = goal.keyResults.map(k => k.id === krId ? { ...k, fact: newFact } : k);
-    onGoalChange({ ...goal, keyResults: newKeyResults });
-    
-    // Сохраняем новый fact на сервере
-    try {
-      const kr = goal.keyResults.find(k => k.id === krId);
-      if (kr) {
-        await axios.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
-          title: kr.title,
-          metric: kr.metric,
-          base: kr.base,
-          plan: kr.plan,
-          formula: kr.formula,
-          fact: newFact,
-          comment: kr.comment,
-        });
-        queryClient.invalidateQueries({ queryKey: ['okrs'] });
-      }
-    } catch (error) {
-      console.error('Ошибка при сохранении fact:', error);
-    }
-  };
 
 
 

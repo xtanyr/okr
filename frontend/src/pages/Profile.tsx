@@ -8,7 +8,6 @@ import StarBackground from '../components/StarBackground';
 
 const Profile: React.FC = () => {
   const user = useUserStore((s) => s.user);
-  const logout = useUserStore((s) => s.logout);
   const setUser = useUserStore((s) => s.setUser);
   const navigate = useNavigate();
 
@@ -33,11 +32,6 @@ const Profile: React.FC = () => {
 
   const handleBack = () => {
     navigate('/dashboard');
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const handleNameSubmit = async (e: React.FormEvent) => {
@@ -116,7 +110,7 @@ const Profile: React.FC = () => {
     <Box className="profile-root" sx={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      minHeight: '100vh',
+      minHeight: '120vh',
       width: '100vw',
       margin: 0,
       padding: '0 !important',
@@ -158,11 +152,6 @@ const Profile: React.FC = () => {
             <Typography variant="body2" color="text.secondary" align="center">
               {user.email}
             </Typography>
-          </Box>
-          <Box display="flex" justifyContent="center" width="100%" mb={4}>
-            <Button variant="outlined" color="error" onClick={handleLogout} sx={{ borderRadius: 2, fontWeight: 600, minWidth: 200 }}>
-              Выйти из аккаунта
-            </Button>
           </Box>
           <Divider sx={{ my: 4 }} />
           <Typography variant="h6" fontWeight={600} mb={2}>
@@ -288,7 +277,7 @@ const Profile: React.FC = () => {
               }
             }}
           >
-          {new Date().getFullYear()} спасибо вам
+          {new Date().getFullYear()} skuratov team
           </Typography>
         </Box>
       </Box>

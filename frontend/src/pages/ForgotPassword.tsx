@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,7 +14,6 @@ export default function ForgotPassword() {
   const { register, handleSubmit, formState: { errors } } = useForm<ForgotPasswordForm>();
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const navigate = useNavigate();
 
   const onSubmit = async (data: ForgotPasswordForm) => {
     setIsLoading(true);

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { TextField, Select, MenuItem, IconButton, useTheme, useMediaQuery, Box, CircularProgress, Menu, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 import type { KeyResult } from '../types';
 
@@ -176,7 +175,7 @@ const weekStyle: React.CSSProperties = {
   fontSize: 13,
 };
 
-const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading, readOnly = false, weeks = [], weeklyValues = {}, weeklyEdit = {}, weeklyLoading = false, isCurrentWeek = () => false, onWeeklyChange, onWeeklySave, onWeeklyEdit, formulas = [], onFormulaChange, savingFormula = false, showWeeklyMonitoring = false }) => {
+const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading, readOnly = false, weeks = [], weeklyValues = {}, weeklyEdit = {}, weeklyLoading = false, isCurrentWeek = () => false, onWeeklyChange, onWeeklySave, onWeeklyEdit, showWeeklyMonitoring = false }) => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const theme = useTheme();
@@ -284,7 +283,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
   }, [editKR, kr.id]);
 
   // Универсальный обработчик изменения
-  const handleChange = (field: keyof KeyResult, value: any) => {
+  const handleChange = (_field: keyof KeyResult, value: any) => {
     setLocalValue(value);
     setEditValue(value);
   };
