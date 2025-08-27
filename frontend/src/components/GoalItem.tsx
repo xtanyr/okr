@@ -845,33 +845,80 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 <tr style={{
                   borderBottom: '2px solid #e5e7eb',
                   background: '#f9fafb',
-                  height: isMobile ? 32 : 36,
+                  height: isMobile ? 28 : 32,
                   fontFamily: 'Inter, Roboto, Arial, sans-serif',
                 }}>
                   {getWeeksForPeriod(startDate, endDate).map((week, i) => {
-                    const isCurrent = isCurrentWeekInPeriod(week);
                     const weekRanges = getWeekRangesForPeriod(startDate, endDate);
+                    // Calculate progress for the week matching KeyResultTableHeader logic
+                    let totalProgress = 0;
+                    let validKRs = 0;
+                    
+                    goal.keyResults.forEach(kr => {
+                      const weeklyValue = weeklyValues[kr.id]?.[week];
+                      if (kr.plan > 0 && weeklyValue !== undefined) {
+                        const weekValue = weeklyValue || 0;
+                        const progress = Math.min((weekValue / kr.plan) * 100, 100); // Cap at 100%
+                        totalProgress += progress;
+                        validKRs++;
+                      }
+                    });
+                    
+                    const avgProgress = validKRs > 0 ? Math.round(totalProgress / validKRs) : 0;
+                    const isCurrent = isCurrentWeekInPeriod(week);
+                    
+                    // Determine color based on progress
+                    let progressColor = '#dc2626'; // red
+                    if (avgProgress >= 100) {
+                      progressColor = '#059669'; // green
+                    } else if (avgProgress >= 50) {
+                      progressColor = '#d97706'; // orange
+                    }
+
                     return (
                       <th key={week} style={{
                         minWidth: isMobile ? 32 : 36,
                         maxWidth: isMobile ? 32 : 36,
                         width: isMobile ? 32 : 36,
                         textAlign: 'center',
-                        fontWeight: isCurrent ? 600 : 500,
-                        fontSize: isMobile ? 11 : 13,
-                        color: isCurrent ? '#111' : '#666',
-                        background: isCurrent ? '#f3f4f6' : '#f7f8fa',
-                        padding: isMobile ? '2px 2px 4px' : '2px 2px 6px',
-                        borderTop: '1px solid #eee',
-                        borderBottom: '1px solid #eee',
-                        transition: 'background 0.2s, color 0.2s'
+                        padding: 0,
+                        border: 'none',
+                        position: 'relative',
+                        background: 'transparent',
                       }}>
+                        <div style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: isMobile ? 10 : 11,
+                          fontWeight: 600,
+                          color: progressColor,
+                          background: isCurrent ? '#f0fdf4' : '#f8fafc',
+                          borderBottom: '1px solid #e5e7eb',
+                        }}>
+                          {avgProgress > 0 ? `${avgProgress}%` : ''}
+                        </div>
                         <Tooltip title={`${weekRanges[i]?.start.toLocaleDateString()} — ${weekRanges[i]?.end.toLocaleDateString()}`} arrow>
                           <span style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            height: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: isMobile ? 11 : 13,
+                            fontWeight: isCurrent ? 600 : 500,
+                            color: isCurrent ? '#111' : '#666',
+                            background: isCurrent ? '#f3f4f6' : '#f7f8fa',
                             cursor: 'pointer',
-                            display: 'block',
-                            padding: '4px 0',
-                            borderRadius: 4,
+                            borderRadius: '0 0 4px 4px',
                             transition: 'background 0.2s'
                           }}>
                             {week}
