@@ -54,7 +54,7 @@ GRANT ALL PRIVILEGES ON DATABASE okr_db TO okr_user;
 su - deployer
 mkdir -p ~/apps/okr
 cd ~/apps/okr
-git clone https://your-repo-url.git .
+git clone https://github.com/xtanyr/okr.git
 
 # Configure .env
 cp .env.example .env
