@@ -17,7 +17,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001;
 const STATIC_DIR = path.join(__dirname, 'frontend/dist');
 
 // MIME типы
@@ -77,7 +77,7 @@ const server = http.createServer((req, res) => {
   // API routes - интегрируем с существующим backend
 if (url.startsWith('/auth') || url.startsWith('/user') || url.startsWith('/okr')) {
   // Проксируем запросы к вашему существующему backend
-  const backendUrl = `http://localhost:4000${url}`;
+  const backendUrl = `http://127.0.0.1:4000${url}`;
   
   console.log(`🔄 Proxying ${method} ${url} to ${backendUrl}`);
   
@@ -86,7 +86,7 @@ if (url.startsWith('/auth') || url.startsWith('/user') || url.startsWith('/okr')
     method: method,
     headers: {
       ...req.headers,
-      host: 'localhost:4000'
+      host: '127.0.0.1:4000'
     }
   }, (proxyRes) => {
     // Копируем заголовки ответа
@@ -103,7 +103,7 @@ if (url.startsWith('/auth') || url.startsWith('/user') || url.startsWith('/okr')
     res.writeHead(502, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ 
       error: 'Backend connection failed',
-      message: 'Cannot connect to backend API server on port 4000'
+      message: 'Cannot connect to backend API server on port 4000. Make sure backend is running with: npm start'
     }));
   });
   
