@@ -9,3 +9,5 @@ node_modules
 .windsurfrules.md
 
 # Build outputs
+dist/
+frontend/dist/

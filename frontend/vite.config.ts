@@ -11,4 +11,18 @@ export default defineConfig({
       '/okr': 'http://localhost:4000',
     },
   },
+  build: {
+    // Оптимизации для сборки
+    target: 'es2015',
+    minify: 'esbuild',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          ui: ['@mui/material', '@emotion/react', '@emotion/styled']
+        }
+      }
+    }
+  }
 })

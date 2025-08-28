@@ -8,7 +8,11 @@
     "dev:backend": "ts-node src/index.ts",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "build:frontend": "cd frontend && npm run build",
+    "start:frontend": "cd frontend && npx serve -s dist -l 3000",
+    "start:frontend:port": "cd frontend && npx serve -s dist -l",
+    "build:all": "npm run build && npm run build:frontend"
   },
   "keywords": [],
   "author": "",
