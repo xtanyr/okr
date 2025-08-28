@@ -114,11 +114,11 @@ sudo nano /etc/nginx/sites-available/okr
 
 # Add:
 server {
-    listen 80 default_server;
+    listen 80;
     server_name _;
 
     # Статика фронтенда (Vite build)
-    root /home/deployer/apps/okr/frontend/dist;
+    root okr/frontend/dist;
     index index.html index.htm;
 
     # SPA fallback
