@@ -12,6 +12,15 @@ export interface KeyResult {
   weeklyValues?: { [week: number]: number }; // Add this for weekly values
 }
 
+export interface Goal {
+  id: string;
+  title: string;
+  keyResults: KeyResult[];
+  order?: number;
+  status?: string;
+  isArchived?: boolean;
+}
+
 export interface WeeklyMonitoring {
   weekNumber: number;
   value: number;

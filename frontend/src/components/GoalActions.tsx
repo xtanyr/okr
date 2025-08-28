@@ -5,7 +5,6 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Typography,
   Divider,
   Dialog,
   DialogTitle,
@@ -29,7 +28,7 @@ import {
   Share as ShareIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { Goal } from '../types';
+import type { Goal } from '../types';
 import styles from '../pages/Dashboard.module.css';
 
 interface GoalActionsProps {
@@ -220,7 +219,9 @@ const GoalActions: React.FC<GoalActionsProps> = ({
                 key={item.id}
                 onClick={(e) => {
                   e.stopPropagation();
-                  item.action();
+                  if (item.action) {
+                    item.action();
+                  }
                 }}
                 className={styles.goalActionsMenuItem}
                 sx={{
@@ -288,7 +289,9 @@ const GoalActions: React.FC<GoalActionsProps> = ({
               color={color}
               onClick={(e) => {
                 e.stopPropagation();
-                item.action();
+                if (item.action) {
+                  item.action();
+                }
               }}
               startIcon={item.icon}
               disabled={disabled}
@@ -297,7 +300,7 @@ const GoalActions: React.FC<GoalActionsProps> = ({
                 color: item.textColor,
                 '&:hover': {
                   backgroundColor: item.id === 'delete' 
-                    ? theme.palette.error.background 
+                    ? theme.palette.error.light 
                     : theme.palette.action.hover,
                 },
               }}

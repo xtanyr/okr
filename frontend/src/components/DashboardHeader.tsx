@@ -1,10 +1,9 @@
 import React from 'react';
-import { User } from '../types';
+import { useUserStore } from '../store/userStore';
 import styles from '../pages/Dashboard.module.css';
 
 interface DashboardHeaderProps {
   title: string;
-  user: User | null;
   onAddClick?: () => void;
   onViewChange?: (view: string) => void;
   activeView?: string;
@@ -14,20 +13,21 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   title,
-  user,
   onAddClick,
   onViewChange,
   activeView = 'dashboard',
   views = ['dashboard', 'archived'],
   className = ''
 }) => {
+  const { user } = useUserStore();
+  
   return (
     <div className={`${styles.header} ${className}`}>
       <div>
         <h1 className={styles.headerTitle}>{title}</h1>
         {user && (
           <p className={styles.headerSubtitle}>
-            Добро пожаловать, {user.name || user.email}
+            Добро пожаловать, {user.firstName || user.email}
           </p>
         )}
       </div>
