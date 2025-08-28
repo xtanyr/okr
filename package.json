@@ -16,6 +16,8 @@
     "build:all": "npm run build && npm run build:frontend",
     "start:unified": "node server.js",
     "start:simple": "node simple-start.js",
+    "start:ultra": "node ultra-simple.js",
+    "start:native": "node native-server.js",
     "build:unified": "npm run build:all && npm run start:unified"
   },
   "keywords": [],
