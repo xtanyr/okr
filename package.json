@@ -12,7 +12,9 @@
     "build:frontend": "cd frontend && npm run build",
     "start:frontend": "cd frontend && npx serve -s dist -l 3000",
     "start:frontend:port": "cd frontend && npx serve -s dist -l",
-    "build:all": "npm run build && npm run build:frontend"
+    "build:all": "npm run build && npm run build:frontend",
+    "start:unified": "node server.js",
+    "build:unified": "npm run build:all && npm run start:unified"
   },
   "keywords": [],
   "author": "",
