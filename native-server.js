@@ -51,8 +51,9 @@ function readFile(filePath) {
 // Создаем HTTP сервер
 const server = http.createServer((req, res) => {
   const url = req.url;
+  const method = req.method;
   
-  console.log(`${req.method} ${url}`);
+  console.log(`${method} ${url}`);
   
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -73,14 +74,56 @@ const server = http.createServer((req, res) => {
     return;
   }
   
-  // API routes - подключаем реальные роуты
+  // API routes - интегрируем с существующим backend
 if (url.startsWith('/auth') || url.startsWith('/user') || url.startsWith('/okr')) {
-  // Пока возвращаем заглушку, но с правильным статусом
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ 
-    error: 'API routes need to be integrated with existing backend',
-    message: 'Backend API is running but routes are not connected yet'
-  }));
+  // Проксируем запросы к вашему существующему backend
+  const backendUrl = `http://localhost:4000${url}`;
+  
+  console.log(`🔄 Proxying ${method} ${url} to ${backendUrl}`);
+  
+  // Простой прокси через http.request
+  const proxyReq = http.request(backendUrl, {
+    method: method,
+    headers: {
+      ...req.headers,
+      host: 'localhost:4000'
+    }
+  }, (proxyRes) => {
+    // Копируем заголовки ответа
+    Object.keys(proxyRes.headers).forEach(key => {
+      res.setHeader(key, proxyRes.headers[key]);
+    });
+    
+    res.writeHead(proxyRes.statusCode);
+    proxyRes.pipe(res);
+  });
+  
+  proxyReq.on('error', (error) => {
+    console.error('❌ Proxy error:', error.message);
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      error: 'Backend connection failed',
+      message: 'Cannot connect to backend API server on port 4000'
+    }));
+  });
+  
+  // Передаем тело запроса, если есть
+  if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', () => {
+      if (body) {
+        proxyReq.write(body);
+      }
+      proxyReq.end();
+    });
+  } else {
+    proxyReq.end();
+  }
+  
   return;
 }
   
