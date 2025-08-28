@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * OKR Startup Script - объединенный сервер
- * Запускает и backend API, и раздает frontend
+ * OKR Simple Startup Script
+ * Простой сервер без сложного роутинга
  */
 
 import express from 'express';
@@ -31,12 +31,8 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'OKR Server is running' });
 });
 
-// Serve index.html for all non-API routes (for React Router support)
+// Простой fallback для SPA
 app.get('*', (req, res) => {
-  // Проверяем, что это не API маршрут
-  if (req.path.startsWith('/auth') || req.path.startsWith('/user') || req.path.startsWith('/okr') || req.path.startsWith('/health')) {
-    return res.status(404).json({ error: 'API route not found' });
-  }
   res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
 });
 

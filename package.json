@@ -1,6 +1,7 @@
 {
   "name": "okr",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -14,6 +15,7 @@
     "start:frontend:port": "cd frontend && npx serve -s dist -l",
     "build:all": "npm run build && npm run build:frontend",
     "start:unified": "node server.js",
+    "start:simple": "node simple-start.js",
     "build:unified": "npm run build:all && npm run start:unified"
   },
   "keywords": [],
