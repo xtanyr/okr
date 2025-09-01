@@ -327,11 +327,29 @@ router.post('/keyresult/:krId/monitoring', requireAuth, async (req: AuthRequest,
 // Получить значения недельного мониторинга по KR
 router.get('/keyresult/:krId/monitoring', requireAuth, async (req: AuthRequest, res) => {
   const { krId } = req.params;
-  const kr = await prisma.keyResult.findUnique({ where: { id: krId }, include: { goal: { include: { okr: true } } } });
-  if (!kr || kr.goal.okr.userId !== req.user!.userId) {
-    return res.status(403).json({ error: 'Нет доступа' });
+  
+  // Проверяем существование ключевого результата
+  const kr = await prisma.keyResult.findUnique({ 
+    where: { id: krId },
+    include: { 
+      goal: { 
+        include: { 
+          okr: true 
+        } 
+      } 
+    } 
+  });
+  
+  if (!kr) {
+    return res.status(404).json({ error: 'Ключевой результат не найден' });
   }
-  const entries = await prisma.weeklyMonitoringEntry.findMany({ where: { keyResultId: krId } });
+  
+  // Разрешаем доступ всем аутентифицированным пользователям
+  const entries = await prisma.weeklyMonitoringEntry.findMany({ 
+    where: { keyResultId: krId },
+    orderBy: { weekNumber: 'asc' } // Сортируем по номеру недели
+  });
+  
   res.json(entries);
 });
 

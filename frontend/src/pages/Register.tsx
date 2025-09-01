@@ -219,9 +219,10 @@ export default function Register() {
                 </svg>
                 <input
                   id="codeWord"
-                  type="password"
+                  type="text"
                   className={`${styles.input} ${errors.codeWord ? styles.inputError : ''}`}
                   placeholder="Введите кодовое слово"
+                  autoComplete="off"
                   {...register('codeWord', {
                     required: 'Кодовое слово обязательно для регистрации',
                   })}

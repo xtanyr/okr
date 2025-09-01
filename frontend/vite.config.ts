@@ -7,9 +7,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/auth': 'http://158.160.136.51:4000',
-      '/user': 'http://158.160.136.51:4000',
-      '/okr': 'http://158.160.136.51:4000',
+      '/auth': 'http://localhost:4000',
+      '/user': 'http://localhost:4000',
+      '/okr': 'http://localhost:4000',
     },
   },
   build: {

@@ -1113,7 +1113,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       fontSize: isMobile ? 9 : 12,
                     }}>
                       <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button variant="text" size="small" onClick={() => !archived && !readOnly && openCommentView(kr)}>Посмотреть</Button>
+                        <Button variant="text" size="small" onClick={() => openCommentView(kr)}>Посмотреть</Button>
                       </Box>
                     </td>
                   </tr>

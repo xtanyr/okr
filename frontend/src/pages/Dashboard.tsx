@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Box, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import { 
+  Box, 
+  CircularProgress, 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  TextField, 
+  Button, 
+  ToggleButtonGroup, 
+  ToggleButton, 
+  Typography 
+} from '@mui/material';
 import axios from 'axios';
 import OkrHeader from '../components/OkrHeader';
 import EmptyState from '../components/dashboard/EmptyState';
@@ -31,8 +43,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [newPeriod, setNewPeriod] = useState('');
   const [creating, setCreating] = useState(false);
+  const [sessionType, setSessionType] = useState('Q1');
+  const [sessionYear, setSessionYear] = useState(new Date().getFullYear());
+  const [error, setError] = useState<string | null>(null);
   const [showWeeklyMonitoring, setShowWeeklyMonitoring] = useState(() => {
     // Загружаем сохраненное состояние недельного мониторинга
     const saved = localStorage.getItem('showWeeklyMonitoring');
@@ -218,21 +232,48 @@ const Dashboard = () => {
 
   // Создание нового OKR
   const handleCreateOKR = async () => {
-    if (!newPeriod.trim()) return;
     setCreating(true);
+    setError(null);
+
     try {
-      const res = await axios.post('/okr', { period: newPeriod });
-      setNewPeriod('');
-      setAddDialogOpen(false);
-      reloadOkrs();
-      // Выбираем только что созданный OKR и переключаемся на активные OKR
-      if (res.data?.id) {
-        updateSelectedOkrId(res.data.id);
-        setShowArchived(false);
+      // Вычисляем даты по кварталу/году
+      let startDate = '', endDate = '', period = '';
+      if (sessionType === 'Y') {
+        startDate = `${sessionYear}-01-01`;
+        endDate = `${sessionYear}-12-31`;
+        period = `${sessionYear}`;
+      } else {
+        const quarters = {
+          Q1: ['01-01', '03-31'],
+          Q2: ['04-01', '06-30'],
+          Q3: ['07-01', '09-30'],
+          Q4: ['10-01', '12-31'],
+        };
+        const [start, end] = quarters[sessionType as keyof typeof quarters];
+        startDate = `${sessionYear}-${start}`;
+        endDate = `${sessionYear}-${end}`;
+        period = `${sessionYear}-${sessionType}`;
       }
-    } catch (error) {
+
+      const response = await axios.post('/okr', {
+        period,
+        startDate,
+        endDate,
+      });
+
+      setSessionType('Q1');
+      setSessionYear(new Date().getFullYear());
+      setAddDialogOpen(false);
+      await reloadOkrs();
+      return response.data;
+    } catch (error: any) {
       console.error('Ошибка при создании OKR:', error);
-      alert('Не удалось создать OKR. Пожалуйста, попробуйте снова.');
+      if (error.response?.data?.error) {
+        setError(error.response.data.error);
+      } else {
+        setError('Произошла ошибка при создании OKR');
+      }
+      throw error;
     } finally {
       setCreating(false);
     }
@@ -626,21 +667,43 @@ const Dashboard = () => {
         </Box>
       )}
       {/* Модалка создания OKR */}
-      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)}>
-        <DialogTitle>Создать OKR</DialogTitle>
+      <Dialog open={addDialogOpen} onClose={() => { setAddDialogOpen(false); setError(null); }}>
+        <DialogTitle>Создание OKR</DialogTitle>
         <DialogContent>
+          <Typography fontWeight={500} mb={1} mt={1}>Выберите период</Typography>
+          <ToggleButtonGroup
+            value={sessionType}
+            exclusive
+            onChange={(_, v) => v && setSessionType(v)}
+            sx={{ mb: 2 }}
+          >
+            <ToggleButton value="Q1">Q1</ToggleButton>
+            <ToggleButton value="Q2">Q2</ToggleButton>
+            <ToggleButton value="Q3">Q3</ToggleButton>
+            <ToggleButton value="Q4">Q4</ToggleButton>
+            <ToggleButton value="Y">Год</ToggleButton>
+          </ToggleButtonGroup>
           <TextField
-            label="Период (например, 2025-Q1)"
-            value={newPeriod}
-            onChange={e => setNewPeriod(e.target.value)}
+            label="Год"
+            type="number"
+            value={sessionYear}
+            onChange={e => setSessionYear(Number(e.target.value))}
             fullWidth
-            autoFocus
-            sx={{ mt: 2 }}
+            sx={{ mb: 2 }}
           />
+          {error && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setAddDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={handleCreateOKR} disabled={!newPeriod || creating}>
+          <Button onClick={() => { setAddDialogOpen(false); setError(null); }}>Отмена</Button>
+          <Button 
+            variant="contained" 
+            onClick={handleCreateOKR}
+            disabled={creating}
+          >
             {creating ? 'Создание...' : 'Создать'}
           </Button>
         </DialogActions>

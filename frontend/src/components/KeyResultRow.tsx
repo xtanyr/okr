@@ -44,7 +44,7 @@ const rowStyle: React.CSSProperties = {
   verticalAlign: 'middle',
   height: 36,
   minHeight: 36,
-  fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
   transition: 'background 0.2s, opacity 0.3s',
 };
 const tdStyle: React.CSSProperties = {
@@ -351,7 +351,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 backgroundColor: 'transparent',
                 border: '1px solid transparent',
                 borderRadius: 1,
-                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 fontSize: isMobile ? 13 : 14,
                 lineHeight: 1.3,
                 fontWeight: 500,
@@ -359,7 +359,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               },
               '& .MuiInputBase-input': {
                 padding: '4px 2px 4px 2px',
-                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 fontSize: 'inherit',
                 fontWeight: 'inherit',
                 lineHeight: 'inherit',
@@ -421,7 +421,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 backgroundColor: '#fff',
                 border: '2px solid #1976d2',
                 borderRadius: 1,
-                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 fontSize: isMobile ? 12 : 13,
                 fontWeight: 500,
                 '&:hover': {
@@ -438,12 +438,12 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               '& .MuiSelect-select': {
                 textAlign: 'center' as const,
                 padding: '8px 4px',
-                fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 fontSize: isMobile ? 12 : 13,
                 fontWeight: 500
               }
             }}
-            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 80, '& .MuiMenuItem-root': { fontSize: isMobile ? 12 : 13, fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" } } } }}
+            MenuProps={{ PaperProps: { sx: { maxHeight: 220, minWidth: 80, '& .MuiMenuItem-root': { fontSize: isMobile ? 12 : 13, fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" } } } }}
             disabled={archived || loadingField === 'metric'}
           >
             {METRICS.map(m => <MenuItem key={m} value={m}>{m}</MenuItem>)}
@@ -630,7 +630,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                   padding: '4px 2px',
                   textAlign: 'center' as const,
                   height: 'auto',
-                  fontFamily: "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+                  fontFamily: "Roboto, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                 },
               }}
               inputProps={{ 

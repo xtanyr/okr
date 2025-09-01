@@ -48,7 +48,7 @@ const theme = createTheme({
   typography: {
     // Match login/register typography baseline
     fontFamily:
-      "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+      "Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
     h1: { fontWeight: 700, fontSize: 32, letterSpacing: '-0.02em' },
     h2: { fontWeight: 700, fontSize: 28 },
     h3: { fontWeight: 600, fontSize: 22 },
@@ -181,9 +181,9 @@ const theme = createTheme({
     MuiInputBase: {
       styleOverrides: {
         input: {
-          // Ensure consistent font family with login/register
+          // Ensure consistent font family with the rest of the application
           fontFamily:
-            "Geist Mono, monospace, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+            "Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif",
         },
       },
     },
