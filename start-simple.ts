@@ -7,8 +7,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createServer } from 'http';
 import { PrismaClient } from '@prisma/client';
-import { router as authRoutes } from './src/auth.cjs';
-import { errorHandler } from './src/middleware/errorHandler.cjs';
+import authRoutes from './src/auth';
+import userRoutes from './src/user';
+import okrRoutes from './src/okr';
 
 // Load environment variables
 dotenv.config();
@@ -17,8 +18,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const BACKEND_PORT = process.env.BACKEND_PORT || 4000;
-const FRONTEND_PORT = process.env.FRONTEND_PORT || 4001;
+const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : 4000;
+const FRONTEND_PORT = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 4001;
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
@@ -33,6 +34,8 @@ app.use(express.static(staticPath));
 
 // API Routes
 app.use('/auth', authRoutes);
+app.use('/user', userRoutes);
+app.use('/okr', okrRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -40,12 +43,15 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use(errorHandler);
+app.use((err: any, req: any, res: any, next: any) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
 
 // Start the backend server
 const server = createServer(app);
 
-server.listen(BACKEND_PORT, '0.0.0.0', () => {
+server.listen(Number(BACKEND_PORT), '0.0.0.0', () => {
   console.log('🚀 OKR Backend Server Started!');
   console.log(`📍 Backend API: http://localhost:${BACKEND_PORT}/health`);
 });
@@ -59,7 +65,7 @@ frontendApp.use((req, res) => {
   res.sendFile(path.join(staticPath, 'index.html'));
 });
 
-frontendApp.listen(FRONTEND_PORT, '0.0.0.0', () => {
+frontendApp.listen(Number(FRONTEND_PORT), '0.0.0.0', () => {
   console.log('🚀 OKR Frontend Server Started!');
   console.log(`📍 Frontend: http://localhost:${FRONTEND_PORT}`);
   console.log(`📍 Static files from: ${staticPath}`);

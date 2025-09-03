@@ -9,7 +9,7 @@ import axios from 'axios';
 
 const queryClient = new QueryClient();
 
-axios.defaults.baseURL = 'http://localhost:4000';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');

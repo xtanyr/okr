@@ -221,3 +221,22 @@ sudo ufw enable
 - Check backup logs: `journalctl -u okr-backup.service`
 - Check Nginx: `sudo systemctl status nginx`
 - Check PostgreSQL: `sudo systemctl status postgresql`
+
+
+git clone https://github.com/xtanyr/okr.git
+git fetch 
+git merge
+cd okr
+npm ci
+nano .env - message
+cd frontend
+npm ci
+cd ..
+npx prisma generate
+npx prisma migrate deploy
+npm run build
+cd frontend
+npm run build
+pm2 start start-simple.ts --name "okr-app" --interpreter="node"
+pm2 startup
+pm2 save
