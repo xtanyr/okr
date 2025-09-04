@@ -237,6 +237,6 @@ npx prisma migrate deploy
 npm run build
 cd frontend
 npm run build
-pm2 start start-simple.ts --name "okr-app" --interpreter="node"
+pm2 start start-simple.ts --name "okr-app" --interpreter="node" --interpreter-args="--import tsx"
 pm2 startup
 pm2 save

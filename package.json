@@ -22,7 +22,7 @@
     "start:ultra": "node ultra-simple.js",
     "start:native": "node native-server.js",
     "build:unified": "npm run build:all && npm run start:unified",
-    "pm2:start": "pm2 start start-simple.ts --name \"okr-app\" --interpreter=\"node\" --interpreter-args=\"-r tsx/register\"",
+    "pm2:start": "pm2 start start-simple.ts --name \"okr-app\" --interpreter=\"node\" --interpreter-args=\"--loader tsx\"",
     "pm2:restart": "pm2 restart okr-app",
     "pm2:stop": "pm2 stop okr-app",
     "pm2:delete": "pm2 delete okr-app",
