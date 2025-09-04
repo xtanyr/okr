@@ -1058,7 +1058,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 </tr>
               </thead>
               <tbody>
-                {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
+                {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr, index) => (
                   <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
                     {/* Формула */}
                     <td style={{
@@ -1092,7 +1092,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                         )}
                       </Box>
                     </td>
-                    {/* Комментарий */}
+                    {/* Комментарий - показываем только для первого ключевого результата */}
                     <td style={{
                       width: isMobile ? '120px' : '200px',
                       minWidth: isMobile ? '120px' : '200px',
@@ -1112,9 +1112,23 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       lineHeight: '1.4',
                       fontSize: isMobile ? 9 : 12,
                     }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button variant="text" size="small" onClick={() => openCommentView(kr)}>Посмотреть</Button>
-                      </Box>
+                      {index === 0 && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                          <Button 
+                            variant="text" 
+                            size="small" 
+                            onClick={() => openCommentView(kr)}
+                            sx={{
+                              color: '#4b5563',
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                              }
+                            }}
+                          >
+                            {kr.comment ? 'Посмотреть комментарий' : 'Добавить комментарий'}
+                          </Button>
+                        </Box>
+                      )}
                     </td>
                   </tr>
                 ))}
