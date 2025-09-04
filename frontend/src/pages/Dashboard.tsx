@@ -351,10 +351,32 @@ const Dashboard = () => {
 
   // Загрузка пользователей
   useEffect(() => {
-    axios.get('/user/all').then(res => {
-      setUsers(res.data.map((u: any) => ({ id: u.id, name: `${u.firstName} ${u.lastName}` })));
-      if (currentUser && !selectedUserId) setSelectedUserId(currentUser.id);
-    });
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('/user/all');
+        if (Array.isArray(response?.data)) {
+          const userList = response.data
+            .filter((u: any) => u?.id && u?.firstName && u?.lastName)
+            .map((u: any) => ({
+              id: u.id,
+              name: `${u.firstName} ${u.lastName}`.trim()
+            }));
+          setUsers(userList);
+          
+          if (currentUser && !selectedUserId) {
+            setSelectedUserId(currentUser.id);
+          }
+        } else {
+          console.error('Invalid users data format:', response.data);
+          setUsers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setUsers([]);
+      }
+    };
+    
+    fetchUsers();
   }, [currentUser]);
 
   // OKR для выбранного пользователя
