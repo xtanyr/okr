@@ -638,56 +638,75 @@ const Dashboard = () => {
   return (
     <Box sx={{
       width: '100%',
-      maxWidth: '100%',
-      px: 0,
-      mx: 0,
-      overflow: 'hidden'
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
-      <OkrHeader
-        users={users}
-        selectedUserId={selectedUserId}
-        onUserChange={setSelectedUserId}
-        okrs={displayedOkrs}
-        selectedOkrId={selectedOkrId}
-        onOkrChange={updateSelectedOkrId}
-        onOkrCreated={reloadOkrs}
-        showWeeklyMonitoring={showWeeklyMonitoring}
-        onToggleWeeklyMonitoring={updateShowWeeklyMonitoring}
-        overallProgress={overallProgress}
-      />
+      {/* Sticky Header */}
+      <Box sx={{
+        flexShrink: 0,
+        zIndex: 1100,
+        backgroundColor: 'background.paper',
+        borderBottom: '1px solid',
+        borderColor: 'divider',
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        right: 0
+      }}>
+        <OkrHeader
+          users={users}
+          selectedUserId={selectedUserId}
+          onUserChange={setSelectedUserId}
+          okrs={displayedOkrs}
+          selectedOkrId={selectedOkrId}
+          onOkrChange={updateSelectedOkrId}
+          onOkrCreated={reloadOkrs}
+          showWeeklyMonitoring={showWeeklyMonitoring}
+          onToggleWeeklyMonitoring={updateShowWeeklyMonitoring}
+          overallProgress={overallProgress}
+        />
+        <OkrTabs showArchived={showArchived} archivedCount={archivedOkrs.length} onChange={handleTabsChange} />
+      </Box>
       
-      <OkrTabs showArchived={showArchived} archivedCount={archivedOkrs.length} onChange={handleTabsChange} />
-      
-      {!selectedOkrId || !selectedOkr ? (
-        <Box sx={{ px: { xs: 1, sm: 0 } }}>
-          <EmptyState
-            showArchived={showArchived}
-            isViewingOwnOkrs={isViewingOwnOkrs || false}
-            onCreateClick={() => setAddDialogOpen(true)}
-          />
-        </Box>
-      ) : (
+      {/* Scrollable Content */}
+      <Box sx={{
+        flex: 1,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        p: { xs: 1, sm: 2, md: 3 },
+        pt: 2
+      }}>
         <Box sx={{
-          width: '100%',
-          px: { xs: 1, sm: 0 },
-          '& > *': {
-            width: '100%'
-          }
-        }}>
-          <OkrDetails
-            okr={selectedOkr}
-            isViewingOwnOkrs={!!isViewingOwnOkrs}
-            showWeeklyMonitoring={showWeeklyMonitoring}
-            onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
-            onDeleteGoal={handleDeleteGoal}
-            onDeleteKR={handleDeleteKR}
-            onDuplicateGoal={handleDuplicateGoal}
-            onDuplicateKR={handleDuplicateKR}
-            onCreateGoal={createGoal}
-            onCreateKr={createKeyResult}
-          />
+            width: '100%',
+            '& > *': {
+              width: '100%'
+            }
+          }}>
+          {!selectedOkrId || !selectedOkr ? (
+            <EmptyState
+              showArchived={showArchived}
+              isViewingOwnOkrs={isViewingOwnOkrs || false}
+              onCreateClick={() => setAddDialogOpen(true)}
+            />
+          ) : (
+            <OkrDetails
+              okr={selectedOkr}
+              isViewingOwnOkrs={!!isViewingOwnOkrs}
+              showWeeklyMonitoring={showWeeklyMonitoring}
+              onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
+              onDeleteGoal={handleDeleteGoal}
+              onDeleteKR={handleDeleteKR}
+              onDuplicateGoal={handleDuplicateGoal}
+              onDuplicateKR={handleDuplicateKR}
+              onCreateGoal={createGoal}
+              onCreateKr={createKeyResult}
+            />
+          )}
         </Box>
-      )}
+      </Box>
       {/* Модалка создания OKR */}
       <Dialog open={addDialogOpen} onClose={() => { setAddDialogOpen(false); setError(null); }}>
         <DialogTitle>Создание OKR</DialogTitle>
@@ -734,4 +753,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

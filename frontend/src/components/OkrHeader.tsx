@@ -150,7 +150,10 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
   };
 
   return (
-    <Box sx={{ mb: { xs: 2, sm: 3, md: 4 } }}>
+    <Box sx={{ 
+      width: '100%',
+      backgroundColor: 'background.paper'
+    }}>
       {/* Mobile Layout */}
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
         {/* First Row: Avatar + Menu Button */}

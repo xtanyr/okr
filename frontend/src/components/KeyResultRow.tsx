@@ -54,13 +54,12 @@ const tdStyle: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
   textAlign: 'center' as const,
-  whiteSpace: 'nowrap',
   overflow: 'hidden',
-  textOverflow: 'ellipsis',
   verticalAlign: 'middle',
   minHeight: 28,
   transition: 'background 0.2s, color 0.2s',
   boxSizing: 'border-box',
+  wordBreak: 'break-word',
 };
 
 // Specific width styles for each column to match header
@@ -81,23 +80,24 @@ const numberStyle: React.CSSProperties = {
   fontSize: 13,
 };
 const titleStyle: React.CSSProperties = { 
-  ...tdStyle, 
-  textAlign: 'left', 
-  width: 'auto', 
-  minWidth: '160px', 
-  maxWidth: 'none',
+  ...tdStyle,
+  textAlign: 'left',
+  minWidth: '160px',
+  maxWidth: '300px',
+  display: 'block',
   whiteSpace: 'normal',
-  wordWrap: 'break-word',
-  overflowWrap: 'break-word',
   wordBreak: 'break-word',
-  display: '-webkit-box',
+  hyphens: 'auto',
+  overflowWrap: 'break-word',
   WebkitLineClamp: 2,
   WebkitBoxOrient: 'vertical',
   textOverflow: 'ellipsis',
   lineHeight: '1.3',
-  padding: '4px 6px',
+  padding: '8px 12px',
   fontSize: '13px !important',
   fontWeight: 500,
+  boxSizing: 'border-box',
+  overflow: 'hidden',
 };
 const metricStyle: React.CSSProperties = { 
   ...tdStyle, 
@@ -356,6 +356,8 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 lineHeight: 1.3,
                 fontWeight: 500,
                 '&:hover': { borderColor: '#e0e0e0' },
+                width: '100%',
+                maxWidth: '100%',
               },
               '& .MuiInputBase-input': {
                 padding: '4px 2px 4px 2px',
@@ -364,7 +366,11 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 fontWeight: 'inherit',
                 lineHeight: 'inherit',
                 whiteSpace: 'pre-wrap',
-                overflowWrap: 'break-word'
+                overflowWrap: 'break-word',
+                wordBreak: 'break-word',
+                hyphens: 'auto',
+                width: '100%',
+                boxSizing: 'border-box',
               },
             }}
             disabled={archived || loadingField === 'title'}
@@ -393,6 +399,10 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               maxHeight: 'none',
               WebkitLineClamp: 4,
               WebkitBoxOrient: 'vertical',
+              width: '100%',
+              boxSizing: 'border-box',
+              wordBreak: 'break-word',
+              hyphens: 'auto',
               '&:hover': !archived && !readOnly ? {
                 backgroundColor: '#f5f5f5',
                 borderColor: '#e0e0e0'
