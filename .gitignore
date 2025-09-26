@@ -7,6 +7,8 @@ node_modules
 .superdesign
 .qodo
 .windsurfrules.md
+/frontend/vite.config.ts
+/frontend/src/main.tsx
 
 # Build outputs
 dist/

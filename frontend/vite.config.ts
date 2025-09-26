@@ -8,9 +8,9 @@ export default defineConfig({
   server: {
     port: 4001,  // Явно указываем порт
     proxy: {
-      '/auth': 'http://92.124.137.137:4000/',
-      '/user': 'http://92.124.137.137:4000/',
-      '/okr': 'http://92.124.137.137:4000/',
+      '/auth': 'http://localhost:4000/',
+      '/user': 'http://localhost:4000/',
+      '/okr': 'http://localhost:4000/',
     },
   },
   build: {

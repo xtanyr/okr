@@ -36,11 +36,6 @@
   opacity: 0.7;
 }
 
-/* Mobile-specific styles */
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 0;
-  }
   
   /* Ensure tables are scrollable on mobile */
   .mobile-table-container {
@@ -54,27 +49,6 @@
     margin: 4px 0 !important;
   }
   
-  /* Hide less important elements on very small screens */
-  @media (max-width: 480px) {
-    .hide-on-mobile {
-      display: none !important;
-    }
-  }
-}
-
-/* Tablet styles */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .dashboard-container {
-    padding: 0 16px;
-  }
-}
-
-/* Desktop styles */
-@media (min-width: 1025px) {
-  .dashboard-container {
-    padding: 0 24px;
-  }
-}
 
 /* Touch-friendly interactive elements */
 @media (hover: none) and (pointer: coarse) {

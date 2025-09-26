@@ -676,7 +676,6 @@ const Dashboard = () => {
         flex: 1,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
-        p: { xs: 1, sm: 2, md: 3 },
         pt: 2
       }}>
         <Box sx={{

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -18,7 +18,10 @@ interface RegisterForm {
 
 export default function Register() {
   const { register, handleSubmit, formState: { errors }, watch } = useForm<RegisterForm>();
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { user, login } = useUserStore();
   const navigate = useNavigate();
   const password = watch('password', '');
@@ -31,20 +34,64 @@ export default function Register() {
   }, [user, navigate]);
 
   const onSubmit = async (data: RegisterForm) => {
+    // Reset form error
+    setFormError(null);
+    
     if (data.password !== data.passwordConfirm) {
-      toast.error('Пароли не совпадают');
+      setFormError('Пароли не совпадают');
       return;
     }
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/auth/register', data);
+      const response = await axios.post('/auth/register', {
+        email: data.email,
+        password: data.password,
+        passwordConfirm: data.passwordConfirm,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        codeWord: data.codeWord
+      });
+      
       login(response.data.user, response.data.token);
       toast.success('Регистрация прошла успешно!');
       navigate('/');
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Произошла ошибка при регистрации';
-      toast.error(errorMessage);
+      console.error('Registration error:', error);
+      let errorMessage = 'Произошла ошибка при регистрации';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const responseData = error.response.data || {};
+        
+        // Log the full response for debugging
+        console.log('Error response data:', responseData);
+        
+        // Try different ways to extract the error message
+        if (typeof responseData === 'string') {
+          errorMessage = responseData;
+        } else if (responseData.error) {
+          errorMessage = responseData.error;
+        } else if (responseData.message) {
+          errorMessage = responseData.message;
+        } else if (error.response.statusText) {
+          errorMessage = error.response.statusText;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error('No response received:', error.request);
+        errorMessage = 'Нет ответа от сервера. Проверьте подключение к интернету.';
+      } else {
+        // Something happened in setting up the request
+        console.error('Request setup error:', error.message);
+        errorMessage = error.message || 'Ошибка при настройке запроса';
+      }
+      
+      // Set form error to display in the form
+      setFormError(errorMessage || 'Произошла ошибка при регистрации');
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +213,7 @@ export default function Register() {
                 </svg>
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   className={`${styles.input} ${errors.password ? styles.inputError : ''}`}
                   placeholder="••••••••"
                   {...register('password', {
@@ -177,6 +224,24 @@ export default function Register() {
                     },
                   })}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={styles.passwordToggle}
+                  aria-label={showPassword ? "Скрыть пароль" : "Показать пароль"}
+                >
+                  {showPassword ? (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"></path>
+                      <line x1="1" y1="1" x2="23" y2="23"></line>
+                    </svg>
+                  ) : (
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  )}
+                </button>
               </div>
               {errors.password && (
                 <p className={styles.errorMessage}>{errors.password.message}</p>
@@ -194,7 +259,7 @@ export default function Register() {
                 </svg>
                 <input
                   id="passwordConfirm"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   className={`${styles.input} ${errors.passwordConfirm ? styles.inputError : ''}`}
                   placeholder="••••••••"
                   {...register('passwordConfirm', {
@@ -230,6 +295,9 @@ export default function Register() {
               </div>
               {errors.codeWord && (
                 <p className={styles.errorMessage}>{errors.codeWord.message}</p>
+              )}
+              {formError && !errors.codeWord && (
+                <p className={styles.errorMessage}>{formError}</p>
               )}
             </div>
 

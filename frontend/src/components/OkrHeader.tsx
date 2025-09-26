@@ -152,14 +152,21 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
   return (
     <Box sx={{ 
       width: '100%',
-      backgroundColor: 'background.paper'
+      backgroundColor: 'background.paper',
+      p: { xs: 1, sm: 2, md: 3 },
+      boxSizing: 'border-box',
+      maxWidth: '100%',
+      mx: 'auto',
+      '& > *:not(:last-child)': {
+        mb: { xs: 1, sm: 2 }
+      }
     }}>
       {/* Mobile Layout */}
       <Box sx={{ display: { xs: 'block', md: 'none' } }}>
         {/* First Row: Avatar + Menu Button */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <UserAvatar size={40} />
+            <UserAvatar size={36} />
           </Box>
           <IconButton
             onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
@@ -220,12 +227,12 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
               py: 0.75,
               gap: 1
             }}>
-              <Box sx={{ position: 'relative', width: 36, height: 36 }}>
-                <CircularProgress variant="determinate" value={100} size={36} thickness={5} sx={{ color: '#e5e7eb' }} />
+              <Box sx={{ position: 'relative', width: 32, height: 32 }}>
+                <CircularProgress variant="determinate" value={100} size={32} thickness={5} sx={{ color: '#e5e7eb' }} />
                 <CircularProgress
                   variant="determinate"
                   value={overallProgress}
-                  size={36}
+                  size={32}
                   thickness={5}
                   sx={{
                     color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
@@ -240,7 +247,7 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  fontSize: 12,
+                  fontSize: 11,
                   color: overallProgress >= 80 ? '#22c55e' : overallProgress >= 40 ? '#f59e0b' : '#ef4444',
                 }}>
                   {overallProgress}%
@@ -252,10 +259,11 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
           
           <FormControlLabel
             control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} size="small" />}
-            label={<Typography variant="caption">Недельный мониторинг</Typography>}
+            label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Недельный мониторинг</Typography>}
             sx={{
               '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 },
-              m: 0
+              m: 0,
+              ml: -0.5
             }}
           />
         </Box>

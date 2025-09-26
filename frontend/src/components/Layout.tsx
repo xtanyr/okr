@@ -10,7 +10,6 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
         component="main"
         sx={{
           width: '100%',
-          p: { xs: 1, sm: 2, md: 3 },
           maxWidth: '100vw',
           overflow: 'hidden',
           flex: 1,

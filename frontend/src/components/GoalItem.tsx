@@ -664,7 +664,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     }}>
       {/* --- Визуальный блок среднего прогресса слева от заголовка цели --- */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
           <Box sx={{ position: 'relative', display: 'inline-flex', width: 56, height: 56 }}>
             <CircularProgress variant="determinate" value={100} size={56} thickness={5} sx={{ color: '#e5e7eb' }} />
             <CircularProgress 
@@ -686,27 +686,69 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               justifyContent: 'center', 
               fontWeight: 700, 
               fontSize: 16,
-              color: avgProgress >= 80 ? '#22c55e' : avgProgress >= 40 ? '#f59e0b' : '#ef4444',
+              color: avgProgress >= 80 ? '#22c55e' : avgProgress >= 40 ? '#f59e0b' : '#ef4444'
             }}>
               {avgProgress}%
             </Box>
           </Box>
-          {editTitle ? (
-            <TextField
-              value={editTitleValue}
-              onChange={e => setEditTitleValue(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setEditTitle(false); setEditTitleValue(goal.title); } }}
-              size="small"
-              autoFocus
-              sx={{ fontWeight: 700, fontSize: 22, minWidth: 180, background: '#f7f9fb', borderRadius: 2 }}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {editTitle ? (
+              <TextField
+                value={editTitleValue}
+                onChange={e => setEditTitleValue(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setEditTitle(false); setEditTitleValue(goal.title); } }}
+                size="small"
+                autoFocus
+                fullWidth
+                multiline
+                variant="standard"
+                InputProps={{
+                  style: {
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    padding: '4px 0',
+                  },
+                  disableUnderline: true,
+                }}
+                sx={{
+                  '& .MuiInputBase-root': {
+                    padding: 0,
+                    width: '100%',
+                    '&:before, &:after': {
+                      display: 'none',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    padding: '4px 8px',
+                    lineHeight: '1.3',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  },
+                  background: '#f7f9fb',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  width: '100%',
+              }}
               disabled={archived || readOnly}
             />
           ) : (
             <Typography
               variant="h5"
               fontWeight={700}
-              sx={{ cursor: (archived || readOnly) ? 'default' : 'pointer', minHeight: 32, fontSize: 22 }}
+              sx={{
+                cursor: (archived || readOnly) ? 'default' : 'pointer',
+                minHeight: 32,
+                fontSize: 22,
+                width: '100%',
+                wordBreak: 'break-word',
+                whiteSpace: 'normal',
+                overflowWrap: 'break-word',
+                paddingRight: '16px',
+                boxSizing: 'border-box'
+              }}
               onClick={() => !archived && !readOnly && setEditTitle(true)}
             >
               {goal.title}
@@ -721,6 +763,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           disabled={archived || readOnly}
         />
       </Box>
+    </Box>
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Удалить цель и все ключевые результаты?</DialogTitle>
         <DialogActions>

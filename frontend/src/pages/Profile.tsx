@@ -76,21 +76,6 @@ const Profile: React.FC = () => {
       .profile-root {
         padding: 0 !important;
       }
-      @media (min-width: 0px) {
-        .css-1bzq6gc {
-          padding: 0 !important;
-        }
-      }
-      @media (min-width: 600px) {
-        .css-1bzq6gc {
-          padding: 0 !important;
-        }
-      }
-      @media (min-width: 900px) {
-        .css-1bzq6gc {
-          padding: 0 !important;
-        }
-      }
     `;
     document.head.appendChild(style);
     
