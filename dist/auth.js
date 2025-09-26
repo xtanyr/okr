@@ -110,7 +110,7 @@ router.post('/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 }));
 // Reset password
-router.post('reset-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { token, password, passwordConfirm } = req.body;
     if (!token) {
         return res.status(400).json({ error: 'Token is required' });

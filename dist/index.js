@@ -14,8 +14,24 @@ const okr_1 = __importDefault(require("./okr"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const prisma = new client_1.PrismaClient();
-app.use((0, cors_1.default)());
+// Configure CORS
+const corsOptions = {
+    origin: '*', // Allow all origins in development
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
+};
+app.use((0, cors_1.default)(corsOptions));
+app.options('*', (0, cors_1.default)(corsOptions)); // Enable pre-flight for all routes
 app.use(express_1.default.json());
+// Request logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    if (Object.keys(req.body).length > 0) {
+        console.log('Request body:', req.body);
+    }
+    next();
+});
 app.use('/auth', auth_1.default);
 app.use('/user', user_1.default);
 app.use('/okr', okr_1.default);

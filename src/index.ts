@@ -13,8 +13,26 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors());
+// Configure CORS
+const corsOptions = {
+  origin: '*', // Allow all origins in development
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 app.use(express.json());
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  if (Object.keys(req.body).length > 0) {
+    console.log('Request body:', req.body);
+  }
+  next();
+});
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
 app.use('/okr', okrRouter);
