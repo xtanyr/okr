@@ -22,7 +22,6 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect if already logged in
     if (token) {
       navigate('/');
     }

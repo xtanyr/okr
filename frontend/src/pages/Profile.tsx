@@ -3,7 +3,7 @@ import { Box, Avatar, Typography, Stack, Button, Paper, TextField, Alert, Divide
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useUserStore, getUserAvatar } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import StarBackground from '../components/StarBackground';
 
 const Profile: React.FC = () => {
@@ -11,14 +11,12 @@ const Profile: React.FC = () => {
   const setUser = useUserStore((s) => s.setUser);
   const navigate = useNavigate();
 
-  // Состояния для формы имени
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [nameLoading, setNameLoading] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
   const [nameSuccess, setNameSuccess] = useState(false);
 
-  // Состояния для формы пароля
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
@@ -40,7 +38,7 @@ const Profile: React.FC = () => {
     setNameError(null);
     setNameSuccess(false);
     try {
-      const res = await axios.patch('/user/me', { firstName, lastName });
+      const res = await api.patch('/user/me', { firstName, lastName });
       setUser({ ...user, firstName: res.data.firstName, lastName: res.data.lastName });
       setNameSuccess(true);
     } catch (e: any) {
@@ -56,7 +54,7 @@ const Profile: React.FC = () => {
     setPassError(null);
     setPassSuccess(false);
     try {
-      await axios.post('/user/change-password', { oldPassword, newPassword, newPasswordConfirm });
+      await api.post('/user/change-password', { oldPassword, newPassword, newPasswordConfirm });
       setPassSuccess(true);
       setOldPassword('');
       setNewPassword('');
@@ -68,9 +66,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Add global styles to remove default margins and padding
   React.useEffect(() => {
-    // Add custom styles to override MUI Container padding
     const style = document.createElement('style');
     style.textContent = `
       .profile-root {

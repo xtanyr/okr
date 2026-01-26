@@ -35,7 +35,6 @@ const GoalCard: React.FC<GoalCardProps> = ({
   };
 
   const handleToggleArchive = async () => {
-    // Handle archive logic
   };
 
   return (

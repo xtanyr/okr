@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Button, Skeleton, TextField, Tooltip, Typography } from '@mui/material';
-import axios from 'axios';
+import api from '../api/axios';
 import { useQueryClient } from '@tanstack/react-query';
 
 import type { KeyResult } from '../types';
@@ -11,40 +11,34 @@ interface WeeklyMonitoringTableProps {
   onWeeklyChange?: (krId: string, weeks: { weekNumber: number; value: number | null }[]) => void;
   startDate?: string;
   endDate?: string;
-  readOnly?: boolean; // режим только для просмотра
+  readOnly?: boolean;
 }
 
 function getCurrentWeek() {
   return getWeekNumber(new Date());
 }
 
-// Функция для получения номера недели в году для заданной даты
 function getWeekNumber(date: Date): number {
   const target = new Date(date.valueOf());
   
-  // Находим понедельник текущей недели
   const dayOfWeek = target.getDay();
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(target);
   monday.setDate(target.getDate() + mondayOffset);
   
-  // Находим первый понедельник года
   const yearStart = new Date(target.getFullYear(), 0, 1);
   const yearStartDay = yearStart.getDay();
   const firstMondayOffset = yearStartDay === 0 ? -6 : 1 - yearStartDay;
   const firstMonday = new Date(yearStart);
   firstMonday.setDate(yearStart.getDate() + firstMondayOffset);
   
-  // Если первый понедельник года позже 4 января, берем последний понедельник предыдущего года
   if (firstMonday.getDate() > 4) {
     firstMonday.setDate(firstMonday.getDate() - 7);
   }
   
-  // Считаем количество недель между датами
   const daysDiff = Math.floor((monday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
   const weekNumber = Math.floor(daysDiff / 7);
   
-  // Отладочная информация для 1 января 2025
   if (target.getFullYear() === 2025 && target.getMonth() === 0 && target.getDate() === 1) {
     console.log('1 января 2025:', {
       target: target.toDateString(),
@@ -58,33 +52,27 @@ function getWeekNumber(date: Date): number {
   return weekNumber;
 }
 
-// Функция для получения даты понедельника по номеру недели и году
 function getDateOfISOWeek(year: number, week: number): Date {
-  // Находим первый понедельник года (или последний понедельник предыдущего года)
   const yearStart = new Date(year, 0, 1);
   const yearStartDay = yearStart.getDay();
   const firstMondayOffset = yearStartDay === 0 ? -6 : 1 - yearStartDay;
   const firstMonday = new Date(yearStart);
   firstMonday.setDate(yearStart.getDate() + firstMondayOffset);
   
-  // Если первый понедельник года позже 4 января, берем последний понедельник предыдущего года
   if (firstMonday.getDate() > 4) {
     firstMonday.setDate(firstMonday.getDate() - 7);
   }
-  
-  // Добавляем нужное количество недель
+
   const targetWeek = new Date(firstMonday);
   targetWeek.setDate(firstMonday.getDate() + (week) * 7);
   
   return targetWeek;
 }
 
-// Функция для получения календарных недель в заданном периоде
 function getCalendarWeeksInPeriod(startDate: Date, endDate: Date): number[] {
   const weeks: number[] = [];
   const currentDate = new Date(startDate);
   
-  // Проходим по всем неделям от начала периода до конца
   while (currentDate <= endDate) {
     const weekNumber = getWeekNumber(currentDate);
     if (!weeks.includes(weekNumber)) {
@@ -96,10 +84,8 @@ function getCalendarWeeksInPeriod(startDate: Date, endDate: Date): number[] {
   return weeks.sort((a, b) => a - b);
 }
 
-// Функция для расчёта fact по формуле
 function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]) {
   if (!weekly.length) return 0;
-  // Сортируем по weekNumber по возрастанию
   const sorted = weekly.slice().sort((a, b) => a.weekNumber - b.weekNumber);
   const values = sorted.map(e => e.value);
   const base = kr.base || 0;
@@ -109,7 +95,7 @@ function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]
     case 'среднее':
       return values.reduce((a, b) => a + b, 0) / values.length;
     case 'текущее':
-      return sorted[sorted.length - 1].value; // последнее по неделе
+      return sorted[sorted.length - 1].value;
     case 'мин':
       return Math.min(...values);
     case 'сумма':
@@ -125,7 +111,7 @@ function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]
     case 'сумма без базы':
       return values.reduce((a, b) => a + b, 0) - base;
     default:
-      return Math.max(...values); // по умолчанию максимум
+      return Math.max(...values);
   }
 }
 
@@ -137,23 +123,19 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
     const start = new Date(startDate);
     const end = new Date(endDate);
     
-    // Используем календарные недели для любого периода
     weeks = getCalendarWeeksInPeriod(start, end);
     weekRanges = weeks.map(weekNum => {
-      // Находим дату начала недели (понедельник)
       const weekStart = getDateOfISOWeek(start.getFullYear(), weekNum);
       const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekEnd.getDate() + 6); // Воскресенье
+      weekEnd.setDate(weekEnd.getDate() + 6);
       return { start: weekStart, end: weekEnd };
     });
   } else {
-    // Fallback для случаев без дат
     weeks = Array.from({ length: 12 }, (_, i) => getCurrentWeek() - 5 + i);
     weekRanges = weeks.map(() => ({ start: new Date(), end: new Date() }));
   }
   const currentWeek = getCurrentWeek();
   
-  // Функция для определения, является ли неделя текущей в данном периоде
   const isCurrentWeek = (weekNumber: number): boolean => {
     if (!startDate || !endDate) return weekNumber === currentWeek;
     
@@ -161,10 +143,8 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
     const end = new Date(endDate);
     const now = new Date();
     
-    // Проверяем, что текущая дата попадает в период OKR
     if (now < start || now > end) return false;
     
-    // Проверяем, что номер недели соответствует текущей неделе в году
     return weekNumber === currentWeek;
   };
   const [values, setValues] = React.useState<{ [krId: string]: { [week: number]: number } }>({});
@@ -174,9 +154,8 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
   React.useEffect(() => {
     krList.forEach(kr => {
       setLoading(l => ({ ...l, [kr.id]: true }));
-      axios.get(`/okr/keyresult/${kr.id}/monitoring`).then(res => {
+      api.get(`/okr/keyresult/${kr.id}/monitoring`).then(res => {
         setValues(v => ({ ...v, [kr.id]: Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value])) }));
-        // Вызываем onFactChange при инициализации с правильной формулой
         if (onFactChange) {
           const weekly = res.data.map((e: any) => ({ weekNumber: e.weekNumber, value: e.value }));
           const newFact = calcFact(kr, weekly);
@@ -189,7 +168,6 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
   const handleChange = (krId: string, week: number, value: number) => {
     setValues(v => {
       const newWeeks = { ...v[krId], [week]: value };
-      // Вызываем onFactChange при изменении значения с правильной формулой
       if (onFactChange) {
         const weekly = Object.entries(newWeeks)
           .filter(([_, val]) => typeof val === 'number')
@@ -198,7 +176,6 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
         const newFact = kr ? calcFact(kr, weekly) : 0;
         onFactChange(krId, newFact);
       }
-      // Вызываем onWeeklyChange с актуальным массивом объектов {weekNumber, value}
       if (onWeeklyChange) {
         const weekArr = weeks.map(weekNumber => ({ weekNumber, value: newWeeks[weekNumber] ?? null }));
         onWeeklyChange(krId, weekArr);
@@ -207,10 +184,9 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
     });
   };
   const handleSave = async (krId: string, week: number) => {
-    await axios.post(`/okr/keyresult/${krId}/monitoring`, { weekNumber: week, value: values[krId]?.[week] });
+    await api.post(`/okr/keyresult/${krId}/monitoring`, { weekNumber: week, value: values[krId]?.[week] });
     setEdit(e => ({ ...e, [krId]: { ...e[krId], [week]: false } }));
-    // После успешного сохранения — повторно загружаем monitoring и передаём в onWeeklyChange
-    const res = await axios.get(`/okr/keyresult/${krId}/monitoring`);
+    const res = await api.get(`/okr/keyresult/${krId}/monitoring`);
     if (onWeeklyChange) {
       const weekArr = res.data.map((e: any) => ({ weekNumber: e.weekNumber, value: e.value }));
       onWeeklyChange(krId, weekArr);
@@ -218,7 +194,6 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
     queryClient.invalidateQueries({ queryKey: ['okrs'] });
   };
 
-  // Определяем тип периода для отображения
   const getPeriodType = () => {
     if (!startDate || !endDate) return '';
     const start = new Date(startDate);

@@ -4,8 +4,8 @@ After=network.target postgresql.service
 
 [Service]
 Type=oneshot
-User=okr
-Group=okr
+User=okr-backup
+Group=okr-backup
 Environment="NODE_ENV=production"
 EnvironmentFile=/etc/okr/.env
 WorkingDirectory=/opt/okr

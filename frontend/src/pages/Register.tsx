@@ -26,7 +26,6 @@ export default function Register() {
   const navigate = useNavigate();
   const password = watch('password', '');
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user) {
       navigate('/');
@@ -34,7 +33,6 @@ export default function Register() {
   }, [user, navigate]);
 
   const onSubmit = async (data: RegisterForm) => {
-    // Reset form error
     setFormError(null);
     
     if (data.password !== data.passwordConfirm) {
@@ -61,14 +59,10 @@ export default function Register() {
       let errorMessage = 'Произошла ошибка при регистрации';
       
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         const responseData = error.response.data || {};
         
-        // Log the full response for debugging
         console.log('Error response data:', responseData);
         
-        // Try different ways to extract the error message
         if (typeof responseData === 'string') {
           errorMessage = responseData;
         } else if (responseData.error) {
@@ -81,16 +75,13 @@ export default function Register() {
           errorMessage = error.message;
         }
       } else if (error.request) {
-        // The request was made but no response was received
         console.error('No response received:', error.request);
         errorMessage = 'Нет ответа от сервера. Проверьте подключение к интернету.';
       } else {
-        // Something happened in setting up the request
         console.error('Request setup error:', error.message);
         errorMessage = error.message || 'Ошибка при настройке запроса';
       }
       
-      // Set form error to display in the form
       setFormError(errorMessage || 'Произошла ошибка при регистрации');
     } finally {
       setIsLoading(false);

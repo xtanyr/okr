@@ -46,7 +46,7 @@ router.post('/register', async (req, res) => {
     },
   });
   const avatar = generateAvatar(firstName);
-  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
   res.json({ token, user: { id: user.id, email: user.email, firstName, lastName, role: user.role, avatar } });
 });
 
@@ -65,7 +65,7 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Неверный email или пароль' });
   }
   const avatar = generateAvatar(user.firstName);
-  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+  const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
   res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar } });
 });
 
@@ -154,6 +154,64 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Password reset error:', error);
     res.status(500).json({ error: 'Error resetting password' });
+  }
+});
+
+// Token refresh endpoint
+router.post('/refresh-token', async (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Token is required' });
+  }
+
+  try {
+    // Verify token (allow expired tokens for refresh within grace period)
+    let payload: any;
+    try {
+      payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+    } catch (error: any) {
+      // If token is expired, try to decode it anyway (for refresh grace period)
+      if (error.name === 'TokenExpiredError') {
+        const decoded = jwt.decode(token) as { userId: string; role: string } | null;
+        if (decoded && decoded.userId) {
+          payload = decoded;
+        } else {
+          return res.status(401).json({ error: 'Invalid token' });
+        }
+      } else {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    }
+
+    // Get user to ensure they still exist and get latest role
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    // Generate new token with extended expiration
+    const avatar = generateAvatar(user.firstName);
+    const newToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    
+    res.json({ 
+      token: newToken, 
+      user: { 
+        id: user.id, 
+        email: user.email, 
+        firstName: user.firstName, 
+        lastName: user.lastName, 
+        role: user.role, 
+        avatar 
+      } 
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({ error: 'Error refreshing token' });
   }
 });
 

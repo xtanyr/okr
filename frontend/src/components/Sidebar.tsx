@@ -17,7 +17,6 @@ const menuItems = [
 const Sidebar = () => {
   const user = useUserStore(state => state.user);
   const logout = useUserStore(state => state.logout);
-  // Initialize state from localStorage or default to false
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebarCollapsed');
@@ -26,7 +25,6 @@ const Sidebar = () => {
     return false;
   });
 
-  // Save to localStorage whenever collapsed state changes
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', String(collapsed));
   }, [collapsed]);

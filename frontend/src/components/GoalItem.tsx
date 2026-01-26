@@ -3,7 +3,7 @@ import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogActions,
 import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
-import axios from 'axios';
+import api from '../api/api';
 import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
@@ -210,10 +210,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     setWeeklyLoading(prev => ({ ...prev, [krId]: true }));
     try {
       // Use the correct API endpoint format from WeeklyMonitoringTable
-      await axios.post(`/okr/keyresult/${krId}/monitoring`, { weekNumber: week, value });
+      await api.post(`/okr/keyresult/${krId}/monitoring`, { weekNumber: week, value });
       
       // After successful save, reload monitoring data and update fact
-      const res = await axios.get(`/okr/keyresult/${krId}/monitoring`);
+      const res = await api.get(`/okr/keyresult/${krId}/monitoring`);
       const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
       setWeeklyValues(prev => ({ ...prev, [krId]: weeklyData }));
       
@@ -228,7 +228,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         onGoalChange({ ...goal, keyResults: newKeyResults });
         
         // Save the updated fact to server
-        await axios.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
+        await api.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
         title: kr.title,
         metric: kr.metric,
         base: kr.base,
@@ -260,7 +260,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     if (showWeeklyMonitoring) {
       goal.keyResults.forEach(kr => {
         setWeeklyLoading(prev => ({ ...prev, [kr.id]: true }));
-        axios.get(`/okr/keyresult/${kr.id}/monitoring`).then(res => {
+        api.get(`/okr/keyresult/${kr.id}/monitoring`).then(res => {
           const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
           setWeeklyValues(prev => ({ ...prev, [kr.id]: weeklyData }));
         }).finally(() => {
@@ -332,7 +332,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     
     // Сохраняем на сервере
     try {
-      await axios.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
+      await api.put(`/okr/goal/${goal.id}/keyresult/${krId}`, {
         title: krData?.title,
         metric: krData?.metric,
         base: krData?.base,
@@ -490,7 +490,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       }
     }
     // Сохраняем KR (PUT)
-    await axios.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
+    await api.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
       title: updatedKR.title,
       metric: updatedKR.metric,
       base: updatedKR.base,
@@ -500,7 +500,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       comment: updatedKR.comment,
     });
     // После сохранения — повторно загружаем monitoring и обновляем KR
-    const res = await axios.get(`/okr/keyresult/${kr.id}/monitoring`);
+    const res = await api.get(`/okr/keyresult/${kr.id}/monitoring`);
     const newWeekly = res.data.map((e: any) => ({ weekNumber: e.weekNumber, value: e.value }));
     const newFact = calcFact(updatedKR, newWeekly);
     const newKeyResults = goal.keyResults.map(k => k.id === kr.id ? { ...k, ...updatedKR, fact: newFact } : k);
@@ -510,14 +510,14 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   };
   const handleDuplicateKR = async (krId: string) => {
     if (archived) return;
-    await axios.post(`/okr/goal/${goal.id}/keyresult/${krId}/duplicate`);
+    await api.post(`/okr/goal/${goal.id}/keyresult/${krId}/duplicate`);
     queryClient.invalidateQueries({ queryKey: ['okrs'] });
   };
   // Функция для сохранения нового названия
   const saveTitle = async () => {
     if (editTitleValue.trim() && editTitleValue !== goal.title) {
       setSaving(true);
-      const res = await axios.put(`/okr/${okrId}/goal/${goal.id}`, {
+      const res = await api.put(`/okr/${okrId}/goal/${goal.id}`, {
         title: editTitleValue,
       });
       setSaving(false);
@@ -893,7 +893,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 }}>
                   {getWeeksForPeriod(startDate, endDate).map((week, i) => {
                     const weekRanges = getWeekRangesForPeriod(startDate, endDate);
-                    // Calculate progress for the week matching KeyResultTableHeader logic
                     let totalProgress = 0;
                     let validKRs = 0;
                     
@@ -901,7 +900,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       const weeklyValue = weeklyValues[kr.id]?.[week];
                       if (kr.plan > 0 && weeklyValue !== undefined) {
                         const weekValue = weeklyValue || 0;
-                        const progress = Math.min((weekValue / kr.plan) * 100, 100); // Cap at 100%
+                        const progress = Math.min((weekValue / kr.plan) * 100, 100);
                         totalProgress += progress;
                         validKRs++;
                       }
@@ -910,12 +909,11 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                     const avgProgress = validKRs > 0 ? Math.round(totalProgress / validKRs) : 0;
                     const isCurrent = isCurrentWeekInPeriod(week);
                     
-                    // Determine color based on progress
-                    let progressColor = '#dc2626'; // red
+                    let progressColor = '#dc2626';
                     if (avgProgress >= 100) {
-                      progressColor = '#059669'; // green
+                      progressColor = '#059669';
                     } else if (avgProgress >= 50) {
-                      progressColor = '#d97706'; // orange
+                      progressColor = '#d97706';
                     }
 
                     return (
@@ -1274,7 +1272,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           const kr = goal.keyResults.find(k => k.id === commentEditorKrId);
           if (kr) {
             try {
-              await axios.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
+              await api.put(`/okr/goal/${goal.id}/keyresult/${kr.id}`, {
                 title: kr.title,
                 metric: kr.metric,
                 base: kr.base,

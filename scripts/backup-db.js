@@ -62,11 +62,13 @@ const dbName = dbConfig.pathname.replace(/^\/+/, '');
 const dbUser = dbConfig.username;
 const dbPass = dbConfig.password;
 const dbHost = dbConfig.hostname;
-const dbPort = dbPort || '5432'; // Default PostgreSQL port
+const dbPort = dbConfig.port || '5432'; // Default PostgreSQL port
 
 // Create backup using pg_dump (PostgreSQL)
 const runBackup = async () => {
   log(`Starting database backup to ${backupFile}...`);
+  
+  let result = { success: false, file: null, error: null };
   
   try {
     // Create backup using pg_dump with proper escaping
@@ -117,7 +119,8 @@ const runBackup = async () => {
       log(`Warning: Failed to log backup to database: ${dbError.message}`);
     }
     
-    return { success: true, file: backupFile };
+    result = { success: true, file: backupFile, error: null };
+    return result;
   } catch (error) {
     const errorMsg = `Backup failed: ${error.message}\n${error.stderr ? error.stderr.toString() : ''}`;
     log(errorMsg);
@@ -132,7 +135,8 @@ const runBackup = async () => {
       log(`Warning: Failed to log backup failure to database: ${dbError.message}`);
     }
     
-    return { success: false, error: errorMsg };
+    result = { success: false, file: null, error: errorMsg };
+    return result;
   } finally {
     try {
       await prisma.$disconnect();
@@ -142,26 +146,30 @@ const runBackup = async () => {
     
     // Send email notification if configured
     if (process.env.EMAIL_NOTIFICATION === 'true' && process.env.ADMIN_EMAIL) {
-      const status = success ? 'SUCCESS' : 'FAILED';
+      const status = result.success ? 'SUCCESS' : 'FAILED';
       const subject = `OKR Backup ${status} - ${new Date().toLocaleString()}`;
-      const text = success 
-        ? `Backup completed successfully.\nFile: ${file}\nSize: ${fs.statSync(file).size} bytes`
-        : `Backup failed.\nError: ${error}`;
+      const text = result.success 
+        ? `Backup completed successfully.\nFile: ${result.file}\nSize: ${fs.statSync(result.file).size} bytes`
+        : `Backup failed.\nError: ${result.error}`;
       
-      await sendEmail({
-        to: process.env.ADMIN_EMAIL,
-        subject,
-        text,
-        html: `
-          <h2>OKR Backup ${status}</h2>
-          <p>${text.replace(/\n/g, '<br>')}</p>
-          <p>Logs are available at: ${LOG_FILE}</p>
-        `,
-        attachments: [{
-          filename: 'backup-log.txt',
-          content: fs.readFileSync(LOG_FILE, 'utf8')
-        }]
-      });
+      try {
+        await sendEmail({
+          to: process.env.ADMIN_EMAIL,
+          subject,
+          text,
+          html: `
+            <h2>OKR Backup ${status}</h2>
+            <p>${text.replace(/\n/g, '<br>')}</p>
+            <p>Logs are available at: ${LOG_FILE}</p>
+          `,
+          attachments: [{
+            filename: 'backup-log.txt',
+            content: fs.readFileSync(LOG_FILE, 'utf8')
+          }]
+        });
+      } catch (emailError) {
+        log(`Warning: Failed to send email notification: ${emailError.message}`);
+      }
     }
   }
 };

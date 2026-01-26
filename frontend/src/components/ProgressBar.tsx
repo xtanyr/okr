@@ -3,9 +3,9 @@ import { LinearProgress, linearProgressClasses, styled } from '@mui/material';
 import React from 'react';
 
 function getColor(value: number) {
-  if (value < 40) return '#ef5350'; // красный
-  if (value < 80) return '#ffb300'; // жёлтый
-  return '#43a047'; // зелёный
+  if (value < 40) return '#ef5350';
+  if (value < 80) return '#ffb300';
+  return '#43a047';
 }
 
 const StyledLinearProgress = styled(LinearProgress)<{ barcolor: string }>(

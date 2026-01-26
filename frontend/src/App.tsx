@@ -9,10 +9,12 @@ import AuthRedirect from './components/AuthRedirect';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
+import TokenRefresh from './components/TokenRefresh';
 
 export default function App() {
   return (
     <Router>
+      <TokenRefresh />
       <Routes>
         <Route path="/login" element={<AuthRedirect><Login /></AuthRedirect>} />
         <Route path="/register" element={<AuthRedirect><Register /></AuthRedirect>} />

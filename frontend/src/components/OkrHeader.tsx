@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Switch, FormControlLabel, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
 import UserAvatar from './UserAvatar';
 import { useState, useRef } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
@@ -51,7 +51,6 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
     setError(null);
 
     try {
-      // Вычисляем даты по кварталу/году
       let startDate = '', endDate = '', period = '';
       if (type === 'Y') {
         startDate = `${year}-01-01`;
@@ -71,7 +70,7 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
       }
 
       console.log('Отправляем запрос на создание OKR:', { period, startDate, endDate });
-      const response = await axios.post('/okr', {
+      const response = await api.post('/okr', {
         period,
         startDate,
         endDate,
@@ -110,7 +109,7 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
 
   const handleDeleteOkr = async () => {
     setDeleting(true);
-    await axios.delete(`/okr/${selectedOkrId}`);
+    await api.delete(`/okr/${selectedOkrId}`);
     setDeleting(false);
     setDeleteDialogOpen(false);
     setMenuAnchorEl(null);
@@ -122,17 +121,13 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
 
     setArchiving(true);
     try {
-      await axios.patch(`/okr/${selectedOkr.current.id}/archive`, { archived });
-      // Close the menu first
+      await api.patch(`/okr/${selectedOkr.current.id}/archive`, { archived });
       handleMenuClose();
-      // Then trigger the callback to reload OKRs
       if (typeof onOkrCreated === 'function') {
-        // Use setTimeout to ensure the menu is closed and state is updated before reloading
         setTimeout(() => onOkrCreated(), 0);
       }
     } catch (error) {
       console.error('Ошибка при архивации OKR:', error);
-      // Still close the menu on error
       handleMenuClose();
     } finally {
       setArchiving(false);

@@ -22,7 +22,7 @@ import {
   Tooltip
 } from '@mui/material';
 import { Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../api/axios';
 import { getUserAvatar, useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 
@@ -44,7 +44,7 @@ const Users: React.FC = () => {
   const isAdmin = currentUser?.role === 'ADMIN';
 
   useEffect(() => {
-    axios.get('/user/all')
+    api.get('/user/all')
       .then(res => setUsers(res.data))
       .catch(e => setError(e.response?.data?.error || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
@@ -59,9 +59,7 @@ const Users: React.FC = () => {
     if (!userToDelete) return;
     
     try {
-      await axios.delete(`/user/${userToDelete.id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
+      await api.delete(`/user/${userToDelete.id}`);
       
       setUsers(users.filter(u => u.id !== userToDelete.id));
       toast.success('Пользователь удален');

@@ -277,7 +277,6 @@ const GoalActions: React.FC<GoalActionsProps> = ({
     );
   }
 
-  // For desktop, show individual buttons with text
   return (
     <Box display="flex" gap={1} flexWrap="wrap">
       {actionItems
