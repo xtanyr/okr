@@ -3,7 +3,7 @@ import { useUserStore } from '../store/userStore';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3500',
   timeout: 10000,
 });
 

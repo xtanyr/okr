@@ -178,7 +178,7 @@ const weekStyle: React.CSSProperties = {
   fontSize: 13,
 };
 
-const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading, readOnly = false, weeks = [], weeklyValues = {}, weeklyEdit = {}, weeklyLoading = false, isCurrentWeek = () => false, onWeeklyChange, onWeeklySave, onWeeklyEdit, showWeeklyMonitoring = false }) => {
+const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editKR, editValue, archived, onEditCell, onSaveCell, onDuplicateKR, onDeleteKR, setEditValue, loading, readOnly = false, weeks = [], weeklyValues = {}, weeklyEdit = {}, weeklyLoading = false, isCurrentWeek = () => false, onWeeklyChange, onWeeklySave, onWeeklyEdit, formulas, onFormulaChange, savingFormula, showWeeklyMonitoring = false }) => {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const theme = useTheme();
@@ -273,8 +273,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       padding: '2px 1px'
     },
     action: { ...actionStyle, width: isMobile ? '40px' : '50px', minWidth: isMobile ? '40px' : '50px', maxWidth: isMobile ? '40px' : '50px' },
-    week: { ...weekStyle, width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px', maxWidth: isMobile ? '40px' : '48px', fontSize: isMobile ? 11 : 15 },
-    formula: { ...formulaStyle, width: isMobile ? '60px' : '70px', minWidth: isMobile ? '60px' : '70px', maxWidth: isMobile ? '60px' : '70px', fontSize: isMobile ? 11 : 12 }
+    week: { ...weekStyle, width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px', maxWidth: isMobile ? '40px' : '48px', fontSize: isMobile ? 11 : 15 }
   };
   // Локальное состояние для плавного ввода
   const [localValue, setLocalValue] = useState<any>(null);
@@ -644,7 +643,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
                 }
               }}
             >
-              {formulas.map(f => <MenuItem key={f} value={f} sx={{ fontSize: isMobile ? 11 : 12 }}>{f}</MenuItem>)}
+              {(formulas || []).map((f: string) => <MenuItem key={f} value={f} sx={{ fontSize: isMobile ? 11 : 12 }}>{f}</MenuItem>)}
             </Select>
             {savingFormula && (
               <CircularProgress size={14} sx={{ ml: 0.5 }} />
