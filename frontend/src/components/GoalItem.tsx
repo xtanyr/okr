@@ -808,12 +808,12 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               weeks={getWeeksForPeriod(startDate, endDate)}
               weekRanges={getWeekRangesForPeriod(startDate, endDate)}
               isCurrentWeek={isCurrentWeekInPeriod}
-              showWeeklyMonitoring={true}
+              showWeeklyMonitoring={false}
               keyResults={goal.keyResults}
             />
             <tbody>
               {goal.keyResults.length === 0 ? (
-                <tr><td colSpan={8 + getWeeksForPeriod(startDate, endDate).length} style={{ textAlign: 'center', padding: 16, color: '#aaa' }}>Нет ключевых результатов. Добавьте первый KR.</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 16, color: '#aaa' }}>Нет ключевых результатов. Добавьте первый KR.</td></tr>
               ) : (
                 goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr, krIdx) => (
                   <KeyResultRow
@@ -830,18 +830,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                     setEditValue={setEditValue}
                     loading={loadingKRId === kr.id}
                     readOnly={readOnly}
-                    weeks={getWeeksForPeriod(startDate, endDate)}
-                    weeklyValues={weeklyValues[kr.id] || {}}
-                    weeklyEdit={weeklyEdit[kr.id] || {}}
-                    weeklyLoading={weeklyLoading[kr.id] || false}
-                    isCurrentWeek={isCurrentWeekInPeriod}
-                    onWeeklyChange={(week, value) => handleWeeklyChange(kr.id, week, value)}
-                    onWeeklySave={(week) => handleWeeklySave(kr.id, week)}
-                    onWeeklyEdit={(week) => handleWeeklyEdit(kr.id, week)}
                     formulas={FORMULAS}
                     onFormulaChange={(formula) => handleFormulaChange(kr.id, formula)}
                     savingFormula={savingFormulaId === kr.id}
-                    showWeeklyMonitoring={true}
+                    showWeeklyMonitoring={false}
                   />
                 ))
               )}

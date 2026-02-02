@@ -112,26 +112,26 @@ const metricStyle: React.CSSProperties = {
 };
 const baseStyle: React.CSSProperties = { 
   ...tdStyle, 
-  width: '44px', 
-  minWidth: '44px', 
-  maxWidth: '44px',
-  padding: '4px 1px',
+  width: '60px', 
+  minWidth: '60px', 
+  maxWidth: '60px',
+  padding: '4px 2px',
   fontSize: 13,
 };
 const planStyle: React.CSSProperties = { 
   ...tdStyle, 
-  width: '44px', 
-  minWidth: '44px', 
-  maxWidth: '44px',
-  padding: '4px 1px',
+  width: '60px', 
+  minWidth: '60px', 
+  maxWidth: '60px',
+  padding: '4px 2px',
   fontSize: 13,
 };
 const factStyle: React.CSSProperties = { 
   ...tdStyle, 
-  width: '44px', 
-  minWidth: '44px', 
-  maxWidth: '44px',
-  padding: '4px 1px',
+  width: '60px', 
+  minWidth: '60px', 
+  maxWidth: '60px',
+  padding: '4px 2px',
   fontSize: 13,
 };
 const formulaStyle: React.CSSProperties = { 
@@ -221,11 +221,11 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
     },
     base: { 
       ...baseStyle, 
-      width: isMobile ? '32px' : '40px', 
-      minWidth: isMobile ? '32px' : '40px', 
-      maxWidth: isMobile ? '32px' : '40px', 
+      width: isMobile ? '45px' : '60px', 
+      minWidth: isMobile ? '45px' : '60px', 
+      maxWidth: isMobile ? '45px' : '60px', 
       fontSize: isMobile ? 12 : 13,
-      padding: '2px 1px',
+      padding: '2px 2px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
@@ -233,11 +233,11 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
     },
     plan: { 
       ...planStyle, 
-      width: isMobile ? '32px' : '40px', 
-      minWidth: isMobile ? '32px' : '40px', 
-      maxWidth: isMobile ? '32px' : '40px', 
+      width: isMobile ? '45px' : '60px', 
+      minWidth: isMobile ? '45px' : '60px', 
+      maxWidth: isMobile ? '45px' : '60px', 
       fontSize: isMobile ? 12 : 13,
-      padding: '2px 1px',
+      padding: '2px 2px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
@@ -245,11 +245,11 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
     },
     fact: { 
       ...factStyle, 
-      width: isMobile ? '32px' : '40px', 
-      minWidth: isMobile ? '32px' : '40px', 
-      maxWidth: isMobile ? '32px' : '40px', 
+      width: isMobile ? '45px' : '60px', 
+      minWidth: isMobile ? '45px' : '60px', 
+      maxWidth: isMobile ? '45px' : '60px', 
       fontSize: isMobile ? 12 : 13,
-      padding: '2px 1px',
+      padding: '2px 2px',
       textAlign: 'center' as const,
       whiteSpace: 'nowrap',
       overflow: 'hidden',
@@ -544,7 +544,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               } : {}
             }}
           >
-            {typeof kr.base === 'number' ? kr.base.toLocaleString() : kr.base}
+            {typeof kr.base === 'number' ? kr.base.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) : kr.base}
           </Box>
         )}
       </td>
@@ -604,7 +604,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
               } : {}
             }}
           >
-            {typeof kr.plan === 'number' ? kr.plan.toLocaleString() : kr.plan}
+            {typeof kr.plan === 'number' ? kr.plan.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) : kr.plan}
           </Box>
         )}
       </td>
@@ -621,7 +621,7 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
         }}>
-          {typeof kr.fact === 'number' ? kr.fact.toFixed(2).replace(/\.?0+$/, '') : kr.fact}
+          {typeof kr.fact === 'number' ? kr.fact.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) : kr.fact}
         </Box>
       </td>
       {/* Formula Cell */}
