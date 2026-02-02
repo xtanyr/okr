@@ -1,9 +1,9 @@
 import React from 'react';
-import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogActions, DialogContent, Paper, MenuItem, Select, CircularProgress, Tooltip, useMediaQuery, useTheme, IconButton } from '@mui/material';
+import { Box, Typography, TextField, Button, Dialog, DialogTitle, DialogActions, DialogContent, Paper, CircularProgress, Tooltip, useMediaQuery, useTheme, IconButton } from '@mui/material';
 import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
-import api from '../api/api';
+import api from '../api/axios';
 import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,7 +26,6 @@ interface GoalItemProps {
   onDuplicateGoal: (goalId: string) => void;
   onDuplicateKR: (krId: string) => void;
   archived: boolean;
-  showWeeklyMonitoring?: boolean;
   mode?: 'weeks'; // только недельные значения
   startDate?: string;
   endDate?: string;
@@ -39,6 +38,7 @@ const FORMULAS = [
   'Текущее',
   'Мин',
   'Сумма',
+  'Снижение',
   'Макс без базы',
   'Среднее без базы',
   'Текущее без базы',
@@ -46,7 +46,7 @@ const FORMULAS = [
   'Сумма без базы',
 ];
 
-const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, archived, showWeeklyMonitoring, startDate, endDate, readOnly = false }) => {
+const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, archived, startDate, endDate, readOnly = false }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const queryClient = useQueryClient();
@@ -257,18 +257,16 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
 
   // Load weekly values on mount
   React.useEffect(() => {
-    if (showWeeklyMonitoring) {
-      goal.keyResults.forEach(kr => {
-        setWeeklyLoading(prev => ({ ...prev, [kr.id]: true }));
-        api.get(`/okr/keyresult/${kr.id}/monitoring`).then(res => {
-          const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
-          setWeeklyValues(prev => ({ ...prev, [kr.id]: weeklyData }));
-        }).finally(() => {
-          setWeeklyLoading(prev => ({ ...prev, [kr.id]: false }));
-        });
+    goal.keyResults.forEach(kr => {
+      setWeeklyLoading(prev => ({ ...prev, [kr.id]: true }));
+      api.get(`/okr/keyresult/${kr.id}/monitoring`).then((res: any) => {
+        const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
+        setWeeklyValues(prev => ({ ...prev, [kr.id]: weeklyData }));
+      }).finally(() => {
+        setWeeklyLoading(prev => ({ ...prev, [kr.id]: false }));
       });
-    }
-  }, [(goal.keyResults || []).map(kr => kr.id).join(','), showWeeklyMonitoring]);
+    });
+  }, [(goal.keyResults || []).map(kr => kr.id).join(',')]);
 
   // Sync row heights between KeyResults table and Formula/Comment table on desktop
   React.useEffect(() => {
@@ -436,6 +434,9 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         break;
       case 'сумма':
         result = values.reduce((a, b) => a + b, 0);
+        break;
+      case 'снижение':
+        result = base - Math.min(...values); // Показывает на сколько снизился показатель от базы
         break;
       case 'макс без базы':
         result = Math.max(...values) - base;
@@ -804,14 +805,15 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               tableLayout: 'auto'
             }}>
             <KeyResultTableHeader 
-              weeks={[]}
-              weekRanges={[]}
-              isCurrentWeek={undefined}
-              showWeeklyMonitoring={false}
+              weeks={getWeeksForPeriod(startDate, endDate)}
+              weekRanges={getWeekRangesForPeriod(startDate, endDate)}
+              isCurrentWeek={isCurrentWeekInPeriod}
+              showWeeklyMonitoring={true}
+              keyResults={goal.keyResults}
             />
             <tbody>
               {goal.keyResults.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 16, color: '#aaa' }}>Нет ключевых результатов. Добавьте первый KR.</td></tr>
+                <tr><td colSpan={8 + getWeeksForPeriod(startDate, endDate).length} style={{ textAlign: 'center', padding: 16, color: '#aaa' }}>Нет ключевых результатов. Добавьте первый KR.</td></tr>
               ) : (
                 goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr, krIdx) => (
                   <KeyResultRow
@@ -828,18 +830,18 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                     setEditValue={setEditValue}
                     loading={loadingKRId === kr.id}
                     readOnly={readOnly}
-                    weeks={[]}
-                    weeklyValues={{}}
-                    weeklyEdit={{}}
-                    weeklyLoading={false}
-                    isCurrentWeek={() => false}
-                    onWeeklyChange={() => {}}
-                    onWeeklySave={() => {}}
-                    onWeeklyEdit={() => {}}
+                    weeks={getWeeksForPeriod(startDate, endDate)}
+                    weeklyValues={weeklyValues[kr.id] || {}}
+                    weeklyEdit={weeklyEdit[kr.id] || {}}
+                    weeklyLoading={weeklyLoading[kr.id] || false}
+                    isCurrentWeek={isCurrentWeekInPeriod}
+                    onWeeklyChange={(week, value) => handleWeeklyChange(kr.id, week, value)}
+                    onWeeklySave={(week) => handleWeeklySave(kr.id, week)}
+                    onWeeklyEdit={(week) => handleWeeklyEdit(kr.id, week)}
                     formulas={FORMULAS}
                     onFormulaChange={(formula) => handleFormulaChange(kr.id, formula)}
                     savingFormula={savingFormulaId === kr.id}
-                    showWeeklyMonitoring={false}
+                    showWeeklyMonitoring={true}
                   />
                 ))
               )}
@@ -857,326 +859,194 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           flexShrink: 0,
           ml: { xs: 0, md: 2 }
         }}>
-          {showWeeklyMonitoring ? (
-            <Box sx={{
-              overflowX: 'auto',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              backgroundColor: '#fff',
-              WebkitOverflowScrolling: 'touch',
-              '&::-webkit-scrollbar': {
-                height: '6px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: '#f1f1f1',
-                borderRadius: '3px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: '#c1c1c1',
-                borderRadius: '3px',
-              }
+          <Box sx={{
+            overflowX: 'auto',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            backgroundColor: '#fff',
+            WebkitOverflowScrolling: 'touch',
+            '&::-webkit-scrollbar': {
+              height: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#c1c1c1',
+              borderRadius: '3px',
+            }
+          }}>
+            <table style={{
+              width: 'max-content',
+              minWidth: isMobile ? '400px' : '100%',
+              borderCollapse: 'separate',
+              borderSpacing: 0,
+              background: '#fff',
+              tableLayout: 'auto'
             }}>
-              <table style={{
-                width: 'max-content',
-                minWidth: isMobile ? '400px' : '100%',
-                borderCollapse: 'separate',
-                borderSpacing: 0,
-                background: '#fff',
-                tableLayout: 'auto'
+            <thead>
+              <tr style={{
+                borderBottom: '2px solid #e5e7eb',
+                background: '#f9fafb',
+                height: isMobile ? 28 : 32,
+                fontFamily: 'Inter, Roboto, Arial, sans-serif',
               }}>
-              <thead>
-                <tr style={{
-                  borderBottom: '2px solid #e5e7eb',
-                  background: '#f9fafb',
-                  height: isMobile ? 28 : 32,
-                  fontFamily: 'Inter, Roboto, Arial, sans-serif',
-                }}>
-                  {getWeeksForPeriod(startDate, endDate).map((week, i) => {
-                    const weekRanges = getWeekRangesForPeriod(startDate, endDate);
-                    let totalProgress = 0;
-                    let validKRs = 0;
-                    
-                    goal.keyResults.forEach(kr => {
-                      const weeklyValue = weeklyValues[kr.id]?.[week];
-                      if (kr.plan > 0 && weeklyValue !== undefined) {
-                        const weekValue = weeklyValue || 0;
-                        const progress = Math.min((weekValue / kr.plan) * 100, 100);
-                        totalProgress += progress;
-                        validKRs++;
-                      }
-                    });
-                    
-                    const avgProgress = validKRs > 0 ? Math.round(totalProgress / validKRs) : 0;
-                    const isCurrent = isCurrentWeekInPeriod(week);
-                    
-                    let progressColor = '#dc2626';
-                    if (avgProgress >= 100) {
-                      progressColor = '#059669';
-                    } else if (avgProgress >= 50) {
-                      progressColor = '#d97706';
+                {getWeeksForPeriod(startDate, endDate).map((week, i) => {
+                  const weekRanges = getWeekRangesForPeriod(startDate, endDate);
+                  let totalProgress = 0;
+                  let validKRs = 0;
+                  
+                  goal.keyResults.forEach(kr => {
+                    const weeklyValue = weeklyValues[kr.id]?.[week];
+                    if (kr.plan > 0 && weeklyValue !== undefined) {
+                      const weekValue = weeklyValue || 0;
+                      const progress = Math.min((weekValue / kr.plan) * 100, 100);
+                      totalProgress += progress;
+                      validKRs++;
                     }
+                  });
+                  
+                  const avgProgress = validKRs > 0 ? Math.round(totalProgress / validKRs) : 0;
+                  const isCurrent = isCurrentWeekInPeriod(week);
+                  
+                  let progressColor = '#dc2626';
+                  if (avgProgress >= 100) {
+                    progressColor = '#059669';
+                  } else if (avgProgress >= 50) {
+                    progressColor = '#d97706';
+                  }
 
-                    return (
-                      <th key={week} style={{
-                        minWidth: isMobile ? 32 : 36,
-                        maxWidth: isMobile ? 32 : 36,
-                        width: isMobile ? 32 : 36,
-                        textAlign: 'center',
-                        padding: 0,
-                        border: 'none',
-                        position: 'relative',
-                        background: 'transparent',
+                  return (
+                    <th key={week} style={{
+                      minWidth: isMobile ? 32 : 36,
+                      maxWidth: isMobile ? 32 : 36,
+                      width: isMobile ? 32 : 36,
+                      textAlign: 'center',
+                      padding: 0,
+                      border: 'none',
+                      position: 'relative',
+                      background: 'transparent',
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: isMobile ? 10 : 11,
+                        fontWeight: 600,
+                        color: progressColor,
+                        background: isCurrent ? '#f0fdf4' : '#f8fafc',
+                        borderBottom: '1px solid #e5e7eb',
                       }}>
-                        <div style={{
+                        {avgProgress > 0 ? `${avgProgress}%` : ''}
+                      </div>
+                      <Tooltip title={`${weekRanges[i]?.start.toLocaleDateString()} — ${weekRanges[i]?.end.toLocaleDateString()}`} arrow>
+                        <span style={{
                           position: 'absolute',
-                          top: 0,
+                          bottom: 0,
                           left: 0,
                           right: 0,
                           height: '50%',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: isMobile ? 10 : 11,
-                          fontWeight: 600,
-                          color: progressColor,
-                          background: isCurrent ? '#f0fdf4' : '#f8fafc',
-                          borderBottom: '1px solid #e5e7eb',
+                          fontSize: isMobile ? 11 : 13,
+                          fontWeight: isCurrent ? 600 : 500,
+                          color: isCurrent ? '#111' : '#666',
+                          background: isCurrent ? '#f3f4f6' : '#f7f8fa',
+                          cursor: 'pointer',
+                          borderRadius: '0 0 4px 4px',
+                          transition: 'background 0.2s'
                         }}>
-                          {avgProgress > 0 ? `${avgProgress}%` : ''}
-                        </div>
-                        <Tooltip title={`${weekRanges[i]?.start.toLocaleDateString()} — ${weekRanges[i]?.end.toLocaleDateString()}`} arrow>
-                          <span style={{
-                            position: 'absolute',
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            height: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: isMobile ? 11 : 13,
-                            fontWeight: isCurrent ? 600 : 500,
-                            color: isCurrent ? '#111' : '#666',
-                            background: isCurrent ? '#f3f4f6' : '#f7f8fa',
-                            cursor: 'pointer',
-                            borderRadius: '0 0 4px 4px',
-                            transition: 'background 0.2s'
-                          }}>
-                            {week}
-                          </span>
-                        </Tooltip>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
-                  <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
-                    {getWeeksForPeriod(startDate, endDate).map(week => (
-                      <td key={week} style={{
-                        width: isMobile ? '40px' : '48px',
-                        minWidth: isMobile ? '40px' : '48px',
-                        maxWidth: isMobile ? '40px' : '48px',
-                        padding: isMobile ? '8px 4px' : '12px 8px',
-                        fontSize: isMobile ? 12 : 15,
-                        color: '#1a202c',
-                        border: 'none',
-                        background: 'transparent',
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                        verticalAlign: 'middle',
-                        minHeight: isMobile ? 28 : 32,
-                        transition: 'background 0.2s, color 0.2s'
-                      }}>
-                        {weeklyLoading[kr.id] ? (
-                          <CircularProgress size={16} />
-                        ) : weeklyEdit[kr.id]?.[week] ? (
-                          <TextField
-                            size="small"
-                            type="number"
-                            value={weeklyValues[kr.id]?.[week] ?? ''}
-                            onChange={e => handleWeeklyChange(kr.id, week, Number(e.target.value))}
-                            onBlur={() => handleWeeklySave(kr.id, week)}
-                            autoFocus
-                            sx={{ 
-                              width: isMobile ? 30 : 34, 
-                              fontSize: isMobile ? 11 : 12, 
-                              background: '#fff', 
-                              borderRadius: 1, 
-                              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)',
-                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
-                                WebkitAppearance: 'none',
-                                margin: 0,
-                              },
-                              '& input[type=number]': {
-                                MozAppearance: 'textfield',
-                              },
-                            }}
-                            inputProps={{ style: { textAlign: 'center', fontSize: isMobile ? 12 : 14, padding: isMobile ? 1 : 2 } }}
-                          />
-                        ) : (
-                          <Box
-                            onClick={() => !readOnly && handleWeeklyEdit(kr.id, week)}
-                            sx={{
-                              minWidth: isMobile ? 28 : 32,
-                              p: 0,
-                              fontSize: isMobile ? 10 : 11,
-                              borderRadius: 1,
-                              border: isCurrentWeekInPeriod(week) ? '1px solid #111' : '1px solid #e0e0e0',
-                              color: isCurrentWeekInPeriod(week) ? '#111' : '#444',
-                              background: isCurrentWeekInPeriod(week) ? '#f3f4f6' : '#fff',
-                              boxShadow: 'none',
-                              transition: 'all 0.15s',
-                              cursor: readOnly ? 'default' : 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minHeight: isMobile ? 28 : 32,
-                              '&:hover': !readOnly ? { borderColor: '#111', background: '#f3f4f6' } : {}
-                            }}
-                          >
-                            {weeklyValues[kr.id]?.[week] ?? '-'}
-                          </Box>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </Box>
-          ) : (
-            <Box sx={{
-              overflowX: 'auto',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              backgroundColor: '#fff',
-              maxWidth: '100%',
-              width: '100%'
-            }}>
-              <table style={{ 
-                width: 'max-content',
-                minWidth: '100%',
-                borderCollapse: 'separate', 
-                borderSpacing: 0, 
-                background: '#fff',
-                tableLayout: 'auto'
-              }}>
-              <thead>
-                <tr style={{
-                  borderBottom: '2px solid #e5e7eb',
-                  background: '#f9fafb',
-                  height: isMobile ? 32 : 36,
-                  fontFamily: 'Inter, Roboto, Arial, sans-serif',
-                }}>
-                  <th style={{ 
-                    padding: isMobile ? '4px 4px' : '6px 6px', 
-                    fontWeight: 600, 
-                    fontSize: isMobile ? 9 : 12, 
-                    color: '#64748b', 
-                    background: 'transparent', 
-                    border: 'none', 
-                    textAlign: 'center', 
-                    whiteSpace: isMobile ? 'normal' : 'nowrap', 
-                    width: '50%', 
-                    minWidth: '50%', 
-                    maxWidth: '50%' 
-                  }}>Формула</th>
-                  <th style={{ 
-                    padding: isMobile ? '4px 4px' : '6px 6px', 
-                    fontWeight: 600, 
-                    fontSize: isMobile ? 9 : 12, 
-                    color: '#64748b', 
-                    background: 'transparent', 
-                    border: 'none', 
-                    textAlign: 'center', 
-                    whiteSpace: isMobile ? 'normal' : 'nowrap', 
-                    width: '50%', 
-                    minWidth: '50%', 
-                    maxWidth: '50%' 
-                  }}>Комментарий</th>
-                </tr>
-              </thead>
-              <tbody>
-                {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr, index) => (
-                  <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
-                    {/* Формула */}
-                    <td style={{
-                      width: '50%',
-                      minWidth: '50%',
-                      maxWidth: '50%',
-                      padding: isMobile ? '6px 2px' : '4px 2px',
-                      fontSize: isMobile ? 9 : 12,
+                          {week}
+                        </span>
+                      </Tooltip>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
+                <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
+                  {getWeeksForPeriod(startDate, endDate).map(week => (
+                    <td key={week} style={{
+                      width: isMobile ? '40px' : '48px',
+                      minWidth: isMobile ? '40px' : '48px',
+                      maxWidth: isMobile ? '40px' : '48px',
+                      padding: isMobile ? '8px 4px' : '12px 8px',
+                      fontSize: isMobile ? 12 : 15,
                       color: '#1a202c',
                       border: 'none',
                       background: 'transparent',
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
                       verticalAlign: 'middle',
-                      minHeight: isMobile ? 12 : 16,
+                      minHeight: isMobile ? 28 : 32,
                       transition: 'background 0.2s, color 0.2s'
                     }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        <Select
-                          value={kr.formula || ''}
-                          disabled={savingFormulaId === kr.id || readOnly || archived}
-                          onChange={e => handleFormulaChange(kr.id, e.target.value)}
+                      {weeklyLoading[kr.id] ? (
+                        <CircularProgress size={16} />
+                      ) : weeklyEdit[kr.id]?.[week] ? (
+                        <TextField
                           size="small"
-                          variant="standard"
-                          sx={{ minWidth: 70 }}
+                          type="number"
+                          value={weeklyValues[kr.id]?.[week] ?? ''}
+                          onChange={e => handleWeeklyChange(kr.id, week, Number(e.target.value))}
+                          onBlur={() => handleWeeklySave(kr.id, week)}
+                          autoFocus
+                          sx={{ 
+                            width: isMobile ? 30 : 34, 
+                            fontSize: isMobile ? 11 : 12, 
+                            background: '#fff', 
+                            borderRadius: 1, 
+                            boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)',
+                            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                              WebkitAppearance: 'none',
+                              margin: 0,
+                            },
+                            '& input[type=number]': {
+                              MozAppearance: 'textfield',
+                            },
+                          }}
+                          inputProps={{ style: { textAlign: 'center', fontSize: isMobile ? 12 : 14, padding: isMobile ? 1 : 2 } }}
+                        />
+                      ) : (
+                        <Box
+                          onClick={() => !readOnly && handleWeeklyEdit(kr.id, week)}
+                          sx={{
+                            minWidth: isMobile ? 28 : 32,
+                            p: 0,
+                            fontSize: isMobile ? 10 : 11,
+                            borderRadius: 1,
+                            border: isCurrentWeekInPeriod(week) ? '1px solid #111' : '1px solid #e0e0e0',
+                            color: isCurrentWeekInPeriod(week) ? '#111' : '#444',
+                            background: isCurrentWeekInPeriod(week) ? '#f3f4f6' : '#fff',
+                            boxShadow: 'none',
+                            transition: 'all 0.15s',
+                            cursor: readOnly ? 'default' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: isMobile ? 28 : 32,
+                            '&:hover': !readOnly ? { borderColor: '#111', background: '#f3f4f6' } : {}
+                          }}
                         >
-                          {FORMULAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
-                        </Select>
-                        {savingFormulaId === kr.id && (
-                          <CircularProgress size={16} />
-                        )}
-                      </Box>
-                    </td>
-                    {/* Комментарий - показываем только для первого ключевого результата */}
-                    <td style={{
-                      width: isMobile ? '120px' : '200px',
-                      minWidth: isMobile ? '120px' : '200px',
-                      maxWidth: isMobile ? '120px' : '200px',
-                      padding: isMobile ? '4px 2px' : '4px 2px',
-                      color: '#1a202c',
-                      border: 'none',
-                      background: 'transparent',
-                      textAlign: 'left',
-                      verticalAlign: 'middle',
-                      transition: 'all 0.2s',
-                      boxSizing: 'border-box',
-                      whiteSpace: 'normal',
-                      wordWrap: 'break-word',
-                      overflowWrap: 'break-word',
-                      wordBreak: 'break-word',
-                      lineHeight: '1.4',
-                      fontSize: isMobile ? 9 : 12,
-                    }}>
-                      {index === 0 && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                          <Button 
-                            variant="text" 
-                            size="small" 
-                            onClick={() => openCommentView(kr)}
-                            sx={{
-                              color: '#4b5563',
-                              '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                              }
-                            }}
-                          >
-                            {kr.comment ? 'Посмотреть комментарий' : 'Добавить комментарий'}
-                          </Button>
+                          {weeklyValues[kr.id]?.[week] ?? '-'}
                         </Box>
                       )}
                     </td>
-                  </tr>
-                ))}
-              </tbody>
-              </table>
-            </Box>
-          )}
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          </Box>
         </Box>
       </Box>
       {!readOnly && (
@@ -1184,11 +1054,61 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           + Добавить ключевой результат
         </Button>
       )}
+      {/* Ключевые инициативы — всегда видимый блок под кнопкой */}
+      {goal.keyResults.length > 0 && (() => {
+        const firstKr = goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))[0];
+        return (
+          <Box sx={{ mt: 2, border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#fafafa', overflow: 'hidden' }}>
+            <Box sx={{ px: 1.5, py: 1, borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f9fafb' }}>
+              <Typography variant="subtitle2" sx={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>Ключевые инициативы</Typography>
+              {!readOnly && !archived && (
+                <Button
+                  size="small"
+                  variant="text"
+                  onClick={() => firstKr.comment ? openCommentView(firstKr) : openCommentEditor(firstKr)}
+                  sx={{ color: '#4b5563', fontSize: 12, textTransform: 'none' }}
+                >
+                  {firstKr.comment ? 'Редактировать' : 'Добавить инициативу'}
+                </Button>
+              )}
+            </Box>
+            <Box
+              sx={{
+                px: 1.5,
+                py: 1.5,
+                minHeight: 48,
+                maxHeight: 200,
+                overflowY: 'auto',
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: '#1a202c',
+                '& p': { m: 0 },
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: '#f1f1f1',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#c1c1c1',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    backgroundColor: '#a8a8a8',
+                  },
+                },
+              }}
+              onClick={handleViewAnchorClick}
+              dangerouslySetInnerHTML={{ __html: firstKr.comment || '<span style="color:#94a3b8">Нет инициатив</span>' }}
+            />
+          </Box>
+        );
+      })()}
     {/* Comment View Dialog */}
     <Dialog open={Boolean(commentViewKrId)} onClose={() => setCommentViewKrId(null)} fullWidth maxWidth="md">
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          Комментарий
+          Ключевые инициативы
           {!readOnly && (
             <Button size="small" onClick={() => {
               const kr = goal.keyResults.find(k => k.id === commentViewKrId);
@@ -1228,7 +1148,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         }
       }}
     >
-      <DialogTitle>Редактирование комментария</DialogTitle>
+      <DialogTitle>Редактирование ключевых инициатив</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
           <Tooltip title="Отменить"><span><IconButton size="small" onClick={() => document.execCommand('undo')}><Undo fontSize="small" /></IconButton></span></Tooltip>

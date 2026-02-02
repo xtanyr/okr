@@ -100,6 +100,8 @@ function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]
       return Math.min(...values);
     case 'сумма':
       return values.reduce((a, b) => a + b, 0);
+    case 'снижение':
+      return base - Math.min(...values); // Показывает на сколько снизился показатель от базы
     case 'макс без базы':
       return Math.max(...values) - base;
     case 'среднее без базы':

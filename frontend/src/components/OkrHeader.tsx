@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Switch, FormControlLabel, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
+import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
 import UserAvatar from './UserAvatar';
 import { useState, useRef } from 'react';
 import api from '../api/axios';
@@ -17,22 +17,18 @@ interface OkrHeaderProps {
   selectedOkrId: string;
   onOkrChange: (okrId: string) => void;
   onOkrCreated?: () => void;
-  showWeeklyMonitoring: boolean;
-  onToggleWeeklyMonitoring: (val: boolean) => void;
   overallProgress?: number;
 }
 
-const OkrHeader: React.FC<OkrHeaderProps> = ({ 
-  users, 
-  selectedUserId, 
-  onUserChange, 
-  okrs, 
-  selectedOkrId, 
-  onOkrChange, 
-  onOkrCreated, 
-  showWeeklyMonitoring, 
-  onToggleWeeklyMonitoring,
-  overallProgress 
+const OkrHeader: React.FC<OkrHeaderProps> = ({
+  users,
+  selectedUserId,
+  onUserChange,
+  okrs,
+  selectedOkrId,
+  onOkrChange,
+  onOkrCreated,
+  overallProgress
 }) => {
   const [open, setOpen] = useState(false);
   const [sessionType, setSessionType] = useState('Q1');
@@ -251,16 +247,6 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
               <Typography variant="caption" color="text.secondary">Прогресс</Typography>
             </Box>
           )}
-          
-          <FormControlLabel
-            control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} size="small" />}
-            label={<Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Недельный мониторинг</Typography>}
-            sx={{
-              '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 },
-              m: 0,
-              ml: -0.5
-            }}
-          />
         </Box>
       </Box>
 
@@ -346,11 +332,6 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
           )}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, ml: 'auto' }}>
-          <FormControlLabel
-            control={<Switch checked={showWeeklyMonitoring} onChange={e => onToggleWeeklyMonitoring(e.target.checked)} />}
-            label="Недельный мониторинг"
-            sx={{ mr: 1, '& .MuiFormControlLabel-label': { color: '#111', fontWeight: 500 } }}
-          />
           <IconButton
             onClick={(e) => selectedOkrId && handleMenuOpen(e, selectedOkrId, okrs.find(o => o.id === selectedOkrId)?.archived || false)}
             disabled={!selectedOkrId}

@@ -47,10 +47,6 @@ const Dashboard = () => {
   const [sessionType, setSessionType] = useState('Q1');
   const [sessionYear, setSessionYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
-  const [showWeeklyMonitoring, setShowWeeklyMonitoring] = useState(() => {
-    const saved = localStorage.getItem('showWeeklyMonitoring');
-    return saved ? JSON.parse(saved) : true;
-  });
   const currentUser = useUserStore(s => s.user);
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
@@ -199,10 +195,6 @@ const Dashboard = () => {
     }
   };
 
-  const updateShowWeeklyMonitoring = (show: boolean) => {
-    setShowWeeklyMonitoring(show);
-    localStorage.setItem('showWeeklyMonitoring', JSON.stringify(show));
-  };
 
   const handleCreateOKR = async () => {
     setCreating(true);
@@ -603,8 +595,6 @@ const Dashboard = () => {
           selectedOkrId={selectedOkrId}
           onOkrChange={updateSelectedOkrId}
           onOkrCreated={reloadOkrs}
-          showWeeklyMonitoring={showWeeklyMonitoring}
-          onToggleWeeklyMonitoring={updateShowWeeklyMonitoring}
           overallProgress={overallProgress}
         />
         <OkrTabs showArchived={showArchived} archivedCount={archivedOkrs.length} onChange={handleTabsChange} />
@@ -633,7 +623,7 @@ const Dashboard = () => {
             <OkrDetails
               okr={selectedOkr}
               isViewingOwnOkrs={!!isViewingOwnOkrs}
-              showWeeklyMonitoring={showWeeklyMonitoring}
+              showWeeklyMonitoring={true}
               onGoalChange={(g) => handleGoalChange(selectedOkr.id, g)}
               onDeleteGoal={handleDeleteGoal}
               onDeleteKR={handleDeleteKR}

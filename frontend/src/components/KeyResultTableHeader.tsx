@@ -57,6 +57,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({
           <th style={{ width: 40, padding: 0, border: 'none' }}></th>
           <th style={{ width: 40, padding: 0, border: 'none' }}></th>
           <th style={{ width: 40, padding: 0, border: 'none' }}></th>
+          <th style={{ width: 70, padding: 0, border: 'none' }}></th>
           {/* Проценты для каждой недели */}
           {weeks.map((week) => {
             const progress = calculateWeekProgress(week);
@@ -172,6 +173,17 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({
           whiteSpace: 'nowrap',
           width: 40
         }}>Факт</th>
+        <th style={{
+          padding: isMobile ? '2px 1px' : '4px 1px',
+          fontWeight: 600,
+          fontSize: isMobile ? 11 : 12,
+          color: '#64748b',
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+          width: 70
+        }}>Формула</th>
         {showWeeklyMonitoring && weeks.map((week) => {
           const isCurrent = isCurrentWeek(week);
           return (
@@ -218,7 +230,7 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({
 
       {icon && (
         <tr>
-          <td colSpan={showWeeklyMonitoring ? 7 + weeks.length + 2 : 9 + 2} style={{ textAlign: 'right', padding: 0 }}>
+          <td colSpan={showWeeklyMonitoring ? 8 + weeks.length + 2 : 8 + 2} style={{ textAlign: 'right', padding: 0 }}>
             {icon}
           </td>
         </tr>

@@ -27,6 +27,9 @@ function calcFact(kr: any) {
     case 'сумма':
       result = values.reduce((a: number, b: number) => a + b, 0);
       break;
+    case 'снижение':
+      result = base - Math.min(...values); // Показывает на сколько снизился показатель от базы
+      break;
     case 'макс без базы':
       result = Math.max(...values) - base;
       break;
@@ -360,13 +363,14 @@ const FORMULAS = [
   'Текущее',
   'Мин',
   'Сумма',
+  'Снижение',
   'Макс без базы',
   'Среднее без базы',
   'Текущее без базы',
   'Минимум без базы',
   'Сумма без базы',
 ];
-const METRICS = ['%', 'Рубли', 'Штуки'];
+const METRICS = ['%', 'Рубли', 'Штуки', 'Дни'];
 
 router.get('/dictionaries', requireAuth, (req, res) => {
   res.json({ formulas: FORMULAS, metrics: METRICS });

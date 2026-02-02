@@ -34,7 +34,7 @@ interface KeyResultRowProps {
   showWeeklyMonitoring?: boolean;
 }
 
-const METRICS = ['%', 'Рубли', 'Штуки', 'другое'];
+const METRICS = ['%', 'Рубли', 'Штуки', 'Дни', 'другое'];
 // FORMULAS больше не нужен
 
 const rowStyle: React.CSSProperties = {
@@ -273,7 +273,8 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
       padding: '2px 1px'
     },
     action: { ...actionStyle, width: isMobile ? '40px' : '50px', minWidth: isMobile ? '40px' : '50px', maxWidth: isMobile ? '40px' : '50px' },
-    week: { ...weekStyle, width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px', maxWidth: isMobile ? '40px' : '48px', fontSize: isMobile ? 11 : 15 }
+    week: { ...weekStyle, width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px', maxWidth: isMobile ? '40px' : '48px', fontSize: isMobile ? 11 : 15 },
+    formula: { ...formulaStyle, width: isMobile ? '60px' : '70px', minWidth: isMobile ? '60px' : '70px', maxWidth: isMobile ? '60px' : '70px', fontSize: isMobile ? 11 : 12 }
   };
   // Локальное состояние для плавного ввода
   const [localValue, setLocalValue] = useState<any>(null);
@@ -623,6 +624,44 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
         }}>
           {typeof kr.fact === 'number' ? kr.fact.toFixed(2).replace(/\.?0+$/, '') : kr.fact}
         </Box>
+      </td>
+      {/* Formula Cell */}
+      <td style={adaptiveStyles.formula}>
+        {formulas && onFormulaChange ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Select
+              value={kr.formula || ''}
+              disabled={savingFormula || readOnly || archived}
+              onChange={e => onFormulaChange(e.target.value)}
+              size="small"
+              variant="standard"
+              sx={{ 
+                minWidth: isMobile ? 55 : 65,
+                fontSize: isMobile ? 11 : 12,
+                '& .MuiSelect-select': {
+                  padding: '4px 2px',
+                  fontSize: isMobile ? 11 : 12,
+                }
+              }}
+            >
+              {formulas.map(f => <MenuItem key={f} value={f} sx={{ fontSize: isMobile ? 11 : 12 }}>{f}</MenuItem>)}
+            </Select>
+            {savingFormula && (
+              <CircularProgress size={14} sx={{ ml: 0.5 }} />
+            )}
+          </Box>
+        ) : (
+          <Box sx={{ 
+            minHeight: 32, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            padding: '4px 2px',
+            fontSize: isMobile ? 11 : 12,
+          }}>
+            {kr.formula || '-'}
+          </Box>
+        )}
       </td>
       {/* Weekly monitoring columns only appear when showWeeklyMonitoring is true */}
       {showWeeklyMonitoring && weeks.map(week => (
