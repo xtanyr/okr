@@ -7,9 +7,13 @@ const router = Router();
 
 // Вспомогательная функция для расчёта 'факт' по формуле
 function calcFact(kr: any) {
-  const values = (kr.weeklyMonitoring || []).map((w: any) => w.value as number);
-  const base = kr.base || 0;
-  if (!values.length) return 0;
+  const weekly = (kr.weeklyMonitoring || []) as { weekNumber: number; value: number }[];
+  if (!weekly.length) return 0;
+
+  const sorted = weekly.slice().sort((a, b) => a.weekNumber - b.weekNumber);
+  const values = sorted.map(w => w.value as number);
+  const base = typeof kr.base === 'number' ? kr.base : 0;
+
   let result;
   switch ((kr.formula || '').toLowerCase()) {
     case 'макс':
@@ -19,7 +23,7 @@ function calcFact(kr: any) {
       result = values.reduce((a: number, b: number) => a + b, 0) / values.length;
       break;
     case 'текущее':
-      result = values[values.length - 1];
+      result = sorted[sorted.length - 1].value;
       break;
     case 'мин':
       result = Math.min(...values);
@@ -28,7 +32,8 @@ function calcFact(kr: any) {
       result = values.reduce((a: number, b: number) => a + b, 0);
       break;
     case 'снижение':
-      result = base - Math.min(...values); // Показывает на сколько снизился показатель от базы
+      // Для "Снижение" факт — это последнее (текущее) значение метрики
+      result = sorted[sorted.length - 1].value;
       break;
     case 'макс без базы':
       result = Math.max(...values) - base;
@@ -37,7 +42,7 @@ function calcFact(kr: any) {
       result = values.reduce((a: number, b: number) => a + b, 0) / values.length - base;
       break;
     case 'текущее без базы':
-      result = values[values.length - 1] - base;
+      result = sorted[sorted.length - 1].value - base;
       break;
     case 'минимум без базы':
       result = Math.min(...values) - base;

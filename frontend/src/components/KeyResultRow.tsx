@@ -183,9 +183,27 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
   const [isDeleting, setIsDeleting] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  // Calculate progress percentage, ensuring it doesn't exceed 100%
-  const progress = kr.plan > 0 ? (kr.fact / kr.plan) * 100 : 0;
-  const percent = Math.min(Math.round(progress), 100);
+
+  // Calculate progress percentage with special handling for "Снижение"
+  let percent = 0;
+  const formula = (kr.formula || '').toLowerCase();
+  if (formula === 'снижение') {
+    const base = typeof kr.base === 'number' ? kr.base : 0;
+    const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+    const fact = typeof kr.fact === 'number' ? kr.fact : 0;
+    const denom = base - plan;
+    if (denom !== 0) {
+      const raw = ((base - fact) / denom) * 100;
+      percent = Math.max(0, Math.min(Math.round(raw), 100));
+    } else {
+      percent = 0;
+    }
+  } else {
+    const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+    const fact = typeof kr.fact === 'number' ? kr.fact : 0;
+    const progress = plan > 0 ? (fact / plan) * 100 : 0;
+    percent = Math.min(Math.round(progress), 100);
+  }
 
   // Адаптивные стили для мобильных устройств
   const adaptiveStyles = {

@@ -84,6 +84,17 @@ function getCalendarWeeksInPeriod(startDate: Date, endDate: Date): number[] {
   return weeks.sort((a, b) => a - b);
 }
 
+function formatMonitoringValue(value: number | undefined | null): string {
+  if (value === undefined || value === null || Number.isNaN(value)) return '-';
+  try {
+    return new Intl.NumberFormat('ru-RU', {
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return String(value);
+  }
+}
+
 function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]) {
   if (!weekly.length) return 0;
   const sorted = weekly.slice().sort((a, b) => a.weekNumber - b.weekNumber);
@@ -101,7 +112,8 @@ function calcFact(kr: KeyResult, weekly: { weekNumber: number, value: number }[]
     case 'сумма':
       return values.reduce((a, b) => a + b, 0);
     case 'снижение':
-      return base - Math.min(...values); // Показывает на сколько снизился показатель от базы
+      // Для "Снижение" факт — это последнее (текущее) значение метрики
+      return sorted[sorted.length - 1].value;
     case 'макс без базы':
       return Math.max(...values) - base;
     case 'среднее без базы':
@@ -226,14 +238,14 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
               const isCurrent = isCurrentWeek(week);
               return (
                 <th key={week} style={{ 
-                  minWidth: 24, 
-                  maxWidth: 28, 
+                  minWidth: 48, 
+                  maxWidth: 56, 
                   textAlign: 'center', 
                   fontWeight: 500, 
-                  fontSize: '0.6rem', 
+                  fontSize: '0.7rem', 
                   color: '#888', 
                   background: isCurrent ? '#e3f2fd' : '#f7f8fa', 
-                  padding: '1px 0', 
+                  padding: '2px 0', 
                   borderTop: '1px solid #f0f0f0', 
                   borderBottom: '1px solid #f0f0f0', 
                   transition: 'all 0.1s' 
@@ -260,26 +272,26 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
             <tr key={kr.id} style={{
               background: 'transparent',
               transition: 'background 0.2s',
-              minHeight: 24,
-              height: 24,
+              minHeight: 28,
+              height: 28,
               borderRadius: 0,
               boxShadow: 'none',
               fontFamily: 'Inter, Roboto, Arial, sans-serif',
               verticalAlign: 'middle',
-              fontSize: '0.75rem',
+              fontSize: '0.8rem',
             }}>
               {weeks.map(week => (
                 <td key={week} style={{
-                  padding: '0',
-                  fontSize: '0.65rem',
+                  padding: '2px 2px',
+                  fontSize: '0.7rem',
                   color: '#1a202c',
                   border: 'none',
                   background: 'transparent',
                   textAlign: 'center',
                   whiteSpace: 'nowrap',
                   verticalAlign: 'middle',
-                  minWidth: 24,
-                  minHeight: 18,
+                  minWidth: 48,
+                  minHeight: 24,
                   borderRight: week === weeks[weeks.length-1] ? 'none' : '1px solid #f7f7f7',
                   borderRadius: 0,
                   transition: 'all 0.2s',
@@ -287,10 +299,10 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
                   {loading[kr.id] ? (
                     <Skeleton 
                       variant="rectangular" 
-                      width={22} 
-                      height={16} 
+                      width={44} 
+                      height={20} 
                       sx={{ 
-                        borderRadius: 0.1, 
+                        borderRadius: 0.1,
                         transition: 'opacity 0.1s',
                         transform: 'none',
                         transformOrigin: '0 0'
@@ -305,18 +317,18 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
                       onBlur={() => handleSave(kr.id, week)}
                       autoFocus
                       sx={{ 
-                        width: 24,
-                        minWidth: 24,
-                        fontSize: '0.65rem',
+                        width: 56,
+                        minWidth: 56,
+                        fontSize: '0.7rem',
                         background: '#fff', 
                         borderRadius: 0.1, 
                         boxShadow: 'none',
                         '& .MuiOutlinedInput-input': { 
-                          padding: '0',
+                          padding: '2px',
                           textAlign: 'center',
-                          fontSize: '0.65rem',
-                          height: '1em',
-                          lineHeight: '1em'
+                          fontSize: '0.7rem',
+                          height: '1.4em',
+                          lineHeight: '1.4em'
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderWidth: '1px !important',
@@ -330,11 +342,11 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
                       size="small"
                       disabled={readOnly}
                       sx={{ 
-                        minWidth: 22,
-                        minHeight: 18,
-                        p: 0, 
+                        minWidth: 48,
+                        minHeight: 24,
+                        p: '0 4px', 
                         m: 0,
-                        fontSize: '0.65rem',
+                        fontSize: '0.7rem',
                         borderRadius: 0.1,
                         border: '1px solid',
                         borderColor: isCurrentWeek(week) ? '#1976d2' : '#f0f0f0',
@@ -356,7 +368,7 @@ const WeeklyMonitoringTable: React.FC<WeeklyMonitoringTableProps> = ({ krList, o
                       }}
                       onClick={() => !readOnly && setEdit(e => ({ ...e, [kr.id]: { ...e[kr.id], [week]: true } }))}
                     >
-                      {values[kr.id]?.[week] ?? '-'}
+                      {formatMonitoringValue(values[kr.id]?.[week])}
                     </Button>
                   )}
                 </td>

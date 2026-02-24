@@ -436,7 +436,8 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         result = values.reduce((a, b) => a + b, 0);
         break;
       case 'снижение':
-        result = base - Math.min(...values); // Показывает на сколько снизился показатель от базы
+        // Для "Снижение" факт — это последнее (текущее) значение метрики
+        result = sorted[sorted.length - 1].value;
         break;
       case 'макс без базы':
         result = Math.max(...values) - base;
@@ -638,17 +639,36 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     }
   };
 
+  // Calculate progress for a single KR with special handling for "Снижение"
+  const getKrProgressPercent = (kr: KeyResult, factValue?: number | null): number => {
+    const formula = (kr.formula || '').toLowerCase();
+    const fact = typeof factValue === 'number' ? factValue : typeof kr.fact === 'number' ? kr.fact : 0;
+
+    if (formula === 'снижение') {
+      const base = typeof kr.base === 'number' ? kr.base : 0;
+      const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+      const denom = base - plan;
+      if (denom === 0) return 0;
+      const raw = ((base - fact) / denom) * 100;
+      return Math.max(0, Math.min(Math.round(raw), 100));
+    }
+
+    const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+    if (plan <= 0) return 0;
+    const raw = (fact / plan) * 100;
+    return Math.max(0, Math.min(Math.round(raw), 100));
+  };
+
   // Calculate average progress for the goal, ensuring it doesn't exceed 100%
   const avgProgress = goal.keyResults.length > 0 
     ? Math.min(
         Math.round(
           goal.keyResults.reduce((sum, kr) => {
-            // Calculate progress for each key result, capping at 100%
-            const progress = kr.plan > 0 ? Math.min((kr.fact / kr.plan) * 100, 100) : 0;
+            const progress = getKrProgressPercent(kr);
             return sum + progress;
           }, 0) / goal.keyResults.length
         ),
-        100 // Cap the final average at 100%
+        100
       )
     : 0;
 
@@ -891,11 +911,12 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                   
                   goal.keyResults.forEach(kr => {
                     const weeklyValue = weeklyValues[kr.id]?.[week];
-                    if (kr.plan > 0 && weeklyValue !== undefined) {
-                      const weekValue = weeklyValue || 0;
-                      const progress = Math.min((weekValue / kr.plan) * 100, 100);
-                      totalProgress += progress;
-                      validKRs++;
+                    if (weeklyValue !== undefined && weeklyValue !== null) {
+                      const progress = getKrProgressPercent(kr, weeklyValue || 0);
+                      if (progress > 0) {
+                        totalProgress += progress;
+                        validKRs++;
+                      }
                     }
                   });
                   
