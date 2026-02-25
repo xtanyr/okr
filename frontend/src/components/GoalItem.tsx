@@ -1054,6 +1054,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                           onClick={() => !readOnly && handleWeeklyEdit(kr.id, week)}
                           sx={{
                             minWidth: isMobile ? 28 : 32,
+                            width: 'auto',
                             px: 0.5,
                             py: 0,
                             fontSize: isMobile ? 9 : 10,
@@ -1069,11 +1070,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                             alignItems: 'center',
                             justifyContent: 'center',
                             textAlign: 'center',
-                            whiteSpace: 'normal',
-                            wordBreak: 'break-all',
+                            whiteSpace: 'nowrap',
+                            overflow: 'visible',
                             minHeight: isMobile ? 28 : 32,
                             maxHeight: isMobile ? 40 : 44,
-                            overflow: 'hidden',
                             '&:hover': !readOnly ? { borderColor: '#111', background: '#f3f4f6' } : {}
                           }}
                         >
