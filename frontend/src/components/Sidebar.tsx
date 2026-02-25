@@ -1,12 +1,9 @@
 import { Box, IconButton, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import AssignmentIcon from '@mui/icons-material/Assignment';
-import PeopleIcon from '@mui/icons-material/People';
-import LogoutIcon from '@mui/icons-material/Logout';
-import MenuIcon from '@mui/icons-material/Menu';
 import { useUserStore } from '../store/userStore';
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { safeGetItem, safeSetItem } from '../utils/localStorage';
 
 const menuItems = [
   { text: 'OKR', icon: <DashboardIcon />, path: '/' },
@@ -19,14 +16,14 @@ const Sidebar = () => {
   const logout = useUserStore(state => state.logout);
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('sidebarCollapsed');
+      const saved = safeGetItem('sidebarCollapsed');
       return saved === 'true';
     }
     return false;
   });
 
   useEffect(() => {
-    localStorage.setItem('sidebarCollapsed', String(collapsed));
+    safeSetItem('sidebarCollapsed', String(collapsed));
   }, [collapsed]);
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();

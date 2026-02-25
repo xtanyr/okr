@@ -1,4 +1,5 @@
   import { create } from 'zustand';
+import { safeGetItem, safeParseJSON, safeSetItem, safeRemoveItem } from '../utils/localStorage';
 
 interface User {
   id: string;
@@ -24,28 +25,28 @@ export const useUserStore = create<UserStore>((set) => ({
   token: null,
   login: (user: User, token: string) => {
     set((state) => ({ ...state, user, token }));
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    safeSetItem('token', token);
+    safeSetItem('user', JSON.stringify(user));
   },
   logout: () => {
     set((state) => ({ ...state, user: null, token: null }));
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    safeRemoveItem('token');
+    safeRemoveItem('user');
   },
   register: (user: User, token: string) => {
     set((state) => ({ ...state, user, token }));
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    safeSetItem('token', token);
+    safeSetItem('user', JSON.stringify(user));
   },
   setUser: (user: User | null) => {
     set((state) => ({ ...state, user }));
-    if (user) localStorage.setItem('user', JSON.stringify(user));
-    else localStorage.removeItem('user');
+    if (user) safeSetItem('user', JSON.stringify(user));
+    else safeRemoveItem('user');
   },
   refreshToken: (token: string, user: User) => {
     set((state) => ({ ...state, token, user }));
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    safeSetItem('token', token);
+    safeSetItem('user', JSON.stringify(user));
   },
 }));
     
@@ -60,8 +61,8 @@ export function getUserAvatar(firstName: string, lastName: string, idOrEmail?: s
 }
 
 
-const token = localStorage.getItem('token');
-const user = localStorage.getItem('user');
+const token = safeGetItem('token');
+const user = safeParseJSON<User>('user');
 if (token && user) {
-  useUserStore.setState((state) => ({ ...state, token, user: JSON.parse(user) }));
+  useUserStore.setState((state) => ({ ...state, token, user }));
 } 

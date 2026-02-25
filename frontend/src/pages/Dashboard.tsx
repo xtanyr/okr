@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useUserStore } from '../store/userStore';
+import { safeGetItem, safeSetItem } from '../utils/localStorage';
 import { 
   Box, 
+  Container, 
+  Grid, 
+  Card, 
+  CardContent, 
   CircularProgress, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
+  Alert,
   TextField, 
   Button, 
   ToggleButtonGroup, 
@@ -16,8 +19,6 @@ import api from '../api/axios';
 import OkrHeader from '../components/OkrHeader';
 import EmptyState from '../components/dashboard/EmptyState';
 import OkrTabs from '../components/dashboard/OkrTabs';
-import OkrDetails from '../components/dashboard/OkrDetails';
-import { useUserStore } from '../store/userStore';
 
 import type { KeyResult } from '../types';
 
@@ -53,7 +54,7 @@ const Dashboard = () => {
   
   const isViewingOwnOkrs = currentUser && selectedUserId === currentUser.id;
   const [selectedOkrId, setSelectedOkrId] = useState<string>(() => {
-    const saved = localStorage.getItem('selectedOkrId');
+    const saved = safeGetItem('selectedOkrId');
     return saved || '';
   });
   
@@ -184,13 +185,13 @@ const Dashboard = () => {
       [showArchived ? 'archive' : 'active']: okrId
     }));
     
-    if (selectedUserId) {
+    if (selectedUserId && okrId) {
       const userOkrKey = `selectedOkrId_${selectedUserId}`;
-      localStorage.setItem(userOkrKey, okrId);
+      safeSetItem(userOkrKey, okrId);
       
       const selectedOkr = okrs.find(o => o.id === okrId);
-      if (selectedOkr) {
-        localStorage.setItem(`lastViewedOkrPeriod_${selectedUserId}`, selectedOkr.period);
+      if (selectedOkr && selectedOkr.period) {
+        safeSetItem(`lastViewedOkrPeriod_${selectedUserId}`, selectedOkr.period);
       }
     }
   };
@@ -260,7 +261,7 @@ const Dashboard = () => {
         }
         
         const userOkrKey = `selectedOkrId_${selectedUserId}`;
-        const savedOkrId = localStorage.getItem(userOkrKey);
+        const savedOkrId = safeGetItem(userOkrKey);
         
         const activeOkrs = userOkrs.filter((okr: OKR) => !okr.archived);
         const archivedOkrs = userOkrs.filter((okr: OKR) => okr.archived);
@@ -281,7 +282,8 @@ const Dashboard = () => {
           }
         }
         
-        const lastViewedPeriod = localStorage.getItem(`lastViewedOkrPeriod_${selectedUserId}`);
+        const lastViewedPeriod = safeGetItem(`lastViewedOkrPeriod_${selectedUserId}`);
+        
         if (lastViewedPeriod) {
           const lastViewedOkr = userOkrs.find((okr: OKR) => okr.period === lastViewedPeriod);
           if (lastViewedOkr) {
