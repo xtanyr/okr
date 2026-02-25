@@ -9,7 +9,10 @@ import axios from 'axios';
 
 const queryClient = new QueryClient();
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+// Если переменная не задана, axios будет использовать относительные URL (тот же origin)
+axios.defaults.baseURL = API_BASE_URL || undefined;
 
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');

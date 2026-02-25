@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { useUserStore } from '../store/userStore';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 // Create axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3500',
+  // If API_BASE_URL is empty, axios will use relative URLs (same origin)
+  baseURL: API_BASE_URL || undefined,
   timeout: 10000,
 });
 
@@ -66,7 +69,7 @@ api.interceptors.request.use(
         if (!isRefreshing) {
           isRefreshing = true;
           try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
+            const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { token });
             const { token: newToken, user } = response.data;
             useUserStore.getState().refreshToken(newToken, user);
             config.headers.Authorization = `Bearer ${newToken}`;
@@ -116,7 +119,7 @@ api.interceptors.response.use(
       if (token && !isRefreshing) {
         isRefreshing = true;
         try {
-          const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
+          const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { token });
           const { token: newToken, user } = response.data;
           useUserStore.getState().refreshToken(newToken, user);
           

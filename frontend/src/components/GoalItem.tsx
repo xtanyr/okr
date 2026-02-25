@@ -46,6 +46,17 @@ const FORMULAS = [
   'Сумма без базы',
 ];
 
+const formatWeeklyValue = (value: number | null | undefined): string => {
+  if (value === null || value === undefined || Number.isNaN(value)) return '-';
+  try {
+    return new Intl.NumberFormat('ru-RU', {
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return String(value);
+  }
+};
+
 const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, archived, startDate, endDate, readOnly = false }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -1034,8 +1045,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                           onClick={() => !readOnly && handleWeeklyEdit(kr.id, week)}
                           sx={{
                             minWidth: isMobile ? 28 : 32,
-                            p: 0,
-                            fontSize: isMobile ? 10 : 11,
+                            px: 0.5,
+                            py: 0,
+                            fontSize: isMobile ? 9 : 10,
+                            lineHeight: 1.1,
                             borderRadius: 1,
                             border: isCurrentWeekInPeriod(week) ? '1px solid #111' : '1px solid #e0e0e0',
                             color: isCurrentWeekInPeriod(week) ? '#111' : '#444',
@@ -1046,11 +1059,16 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            textAlign: 'center',
+                            whiteSpace: 'normal',
+                            wordBreak: 'break-all',
                             minHeight: isMobile ? 28 : 32,
+                            maxHeight: isMobile ? 40 : 44,
+                            overflow: 'hidden',
                             '&:hover': !readOnly ? { borderColor: '#111', background: '#f3f4f6' } : {}
                           }}
                         >
-                          {weeklyValues[kr.id]?.[week] ?? '-'}
+                          {formatWeeklyValue(weeklyValues[kr.id]?.[week] ?? null)}
                         </Box>
                       )}
                     </td>
