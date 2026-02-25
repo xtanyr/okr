@@ -1002,7 +1002,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                     <td key={week} style={{
                       width: isMobile ? '40px' : '48px',
                       minWidth: isMobile ? '40px' : '48px',
-                      maxWidth: isMobile ? '40px' : '48px',
+                      maxWidth: 'none',
                       padding: isMobile ? '8px 4px' : '12px 8px',
                       fontSize: isMobile ? 12 : 15,
                       color: '#1a202c',
@@ -1025,7 +1025,8 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                           onBlur={() => handleWeeklySave(kr.id, week)}
                           autoFocus
                           sx={{ 
-                            width: isMobile ? 30 : 34, 
+                            minWidth: isMobile ? 30 : 34, 
+                            width: 'auto',
                             fontSize: isMobile ? 11 : 12, 
                             background: '#fff', 
                             borderRadius: 1, 
@@ -1038,7 +1039,15 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                               MozAppearance: 'textfield',
                             },
                           }}
-                          inputProps={{ style: { textAlign: 'center', fontSize: isMobile ? 12 : 14, padding: isMobile ? 1 : 2 } }}
+                          inputProps={{ 
+                            style: { 
+                              textAlign: 'center', 
+                              fontSize: isMobile ? 12 : 14, 
+                              padding: isMobile ? 1 : 2,
+                              width: 'auto',
+                              minWidth: isMobile ? 26 : 30
+                            } 
+                          }}
                         />
                       ) : (
                         <Box
