@@ -1009,7 +1009,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       border: 'none',
                       background: 'transparent',
                       textAlign: 'center',
-                      whiteSpace: 'nowrap',
+                      whiteSpace: 'normal',
                       verticalAlign: 'middle',
                       minHeight: isMobile ? 28 : 32,
                       transition: 'background 0.2s, color 0.2s'
@@ -1073,7 +1073,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                             whiteSpace: 'nowrap',
                             overflow: 'visible',
                             minHeight: isMobile ? 28 : 32,
-                            maxHeight: isMobile ? 40 : 44,
                             '&:hover': !readOnly ? { borderColor: '#111', background: '#f3f4f6' } : {}
                           }}
                         >
