@@ -12,8 +12,8 @@ import authRoutes from './src/auth';
 import userRoutes from './src/user';
 import okrRoutes from './src/okr';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables - load from current directory
+dotenv.config({ path: path.join(process.cwd(), '.env') });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,21 +21,28 @@ const __dirname = path.dirname(__filename);
 // Create Express apps
 const app = express();
 const frontendApp = express();
-const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : 4000;
+
+// Support both PORT and BACKEND_PORT for compatibility
+const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : (process.env.PORT ? parseInt(process.env.PORT) : 4000);
 const FRONTEND_PORT = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3000;
 
 // Initialize Prisma client
 const prisma = new PrismaClient();
 
+// CORS options
+const corsOptions = {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+};
+
 // Backend API Middleware
-app.use(cors());
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
-// Frontend static files
-const staticPath = path.join(__dirname, 'frontend/dist');
-frontendApp.use(express.static(staticPath));
-
-// API Routes
+// API Routes - MUST come before static file serving
 app.use('/auth', authRoutes);
 app.use('/user', userRoutes);
 app.use('/okr', okrRoutes);
@@ -45,21 +52,30 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'OKR Server is running' });
 });
 
+// Frontend static files
+const staticPath = path.join(__dirname, 'frontend/dist');
+frontendApp.use(express.static(staticPath));
+
 // Handle SPA routing - use a function with proper ES module syntax
 frontendApp.use((req, res) => {
   res.sendFile(path.join(staticPath, 'index.html'));
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err.message);
+  console.error('Stack:', err.stack);
+  res.status(500).json({ error: err.message || 'Something went wrong!' });
 });
+
+// Log available routes for debugging
+console.log('Auth routes loaded:', authRoutes.stack?.map((r: any) => r.route?.path).filter(Boolean) || []);
 
 // Start backend server
 app.listen(BACKEND_PORT, '0.0.0.0', () => {
   console.log('🚀 OKR Backend Server Started!');
   console.log(`📍 Backend API: http://localhost:${BACKEND_PORT}/health`);
+  console.log(`📍 Auth routes mounted at: http://localhost:${BACKEND_PORT}/auth`);
 });
 
 // Start frontend server
