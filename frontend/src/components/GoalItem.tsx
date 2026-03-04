@@ -266,18 +266,42 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     }));
   };
 
-  // Load weekly values on mount
+  // Load weekly values on mount and when goal changes
   React.useEffect(() => {
-    goal.keyResults.forEach(kr => {
-      setWeeklyLoading(prev => ({ ...prev, [kr.id]: true }));
-      api.get(`/okr/keyresult/${kr.id}/monitoring`).then((res: any) => {
-        const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
-        setWeeklyValues(prev => ({ ...prev, [kr.id]: weeklyData }));
-      }).finally(() => {
-        setWeeklyLoading(prev => ({ ...prev, [kr.id]: false }));
+    const loadWeeklyValues = async () => {
+      goal.keyResults.forEach(kr => {
+        setWeeklyLoading(prev => ({ ...prev, [kr.id]: true }));
       });
-    });
-  }, [(goal.keyResults || []).map(kr => kr.id).join(',')]);
+      
+      try {
+        // Load all weekly values in parallel
+        const promises = goal.keyResults.map(kr => 
+          api.get(`/okr/keyresult/${kr.id}/monitoring`)
+        );
+        
+        const responses = await Promise.all(promises);
+        
+        const newWeeklyValues: { [krId: string]: { [week: number]: number | null } } = {};
+        responses.forEach((res, index) => {
+          const krId = goal.keyResults[index].id;
+          const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
+          newWeeklyValues[krId] = weeklyData;
+        });
+        
+        setWeeklyValues(newWeeklyValues);
+      } catch (error) {
+        console.error('Error loading weekly values:', error);
+      } finally {
+        goal.keyResults.forEach(kr => {
+          setWeeklyLoading(prev => ({ ...prev, [kr.id]: false }));
+        });
+      }
+    };
+    
+    if (goal.keyResults && goal.keyResults.length > 0) {
+      loadWeeklyValues();
+    }
+  }, [goal.keyResults?.length, okrId]);
 
   // Sync row heights between KeyResults table and Formula/Comment table on desktop
   React.useEffect(() => {
