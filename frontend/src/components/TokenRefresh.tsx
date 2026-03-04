@@ -43,7 +43,7 @@ export default function TokenRefresh() {
     const checkAndRefreshToken = async () => {
       if (isTokenExpiringSoon(token)) {
         try {
-          const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
+          const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://92.124.137.137:4000'}/auth/refresh-token`, { token });
           const { token: newToken, user: updatedUser } = response.data;
           refreshToken(newToken, updatedUser);
           console.log('Token refreshed automatically');

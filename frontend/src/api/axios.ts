@@ -3,7 +3,7 @@ import { useUserStore } from '../store/userStore';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  baseURL: import.meta.env.VITE_API_URL || 'http://92.124.137.137:4000',
   timeout: 10000,
 });
 
@@ -66,7 +66,7 @@ api.interceptors.request.use(
         if (!isRefreshing) {
           isRefreshing = true;
           try {
-            const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
+            const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://92.124.137.137:4000'}/auth/refresh-token`, { token });
             const { token: newToken, user } = response.data;
             useUserStore.getState().refreshToken(newToken, user);
             config.headers.Authorization = `Bearer ${newToken}`;
@@ -116,7 +116,7 @@ api.interceptors.response.use(
       if (token && !isRefreshing) {
         isRefreshing = true;
         try {
-          const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
+          const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://92.124.137.137:4000'}/auth/refresh-token`, { token });
           const { token: newToken, user } = response.data;
           useUserStore.getState().refreshToken(newToken, user);
           
