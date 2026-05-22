@@ -4,7 +4,7 @@ import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
 import api from '../api/axios';
-import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear, PaintBrush } from '@mui/icons-material';
+import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear, FormatPaint } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -1241,7 +1241,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 }}
                 sx={formatPainterMode !== 'inactive' ? { backgroundColor: 'warning.main', color: 'white', '&:hover': { backgroundColor: 'warning.dark' } } : {}}
               >
-                <PaintBrush fontSize="small" />
+                <FormatPaint fontSize="small" />
               </IconButton>
             </span>
           </Tooltip>
