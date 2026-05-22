@@ -29,7 +29,8 @@ const distPath = path.join(__dirname, 'frontend/dist');
 app.use(express.static(distPath));
 
 // SPA fallback - send index.html for all other routes
-app.get('*', (req, res) => {
+// Note: Express 5 requires regex for catch-all instead of '*'
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
