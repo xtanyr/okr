@@ -2,9 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
-import authRouter from './auth';
-import userRouter from './user';
-import okrRouter from './okr';
+import authRouter from './auth.js';
+import userRouter from './user.js';
+import okrRouter from './okr.js';
 import { Request, Response, NextFunction } from 'express';
 
 // Инициализация переменных окружения
@@ -22,13 +22,12 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable pre-flight for all routes
 app.use(express.json());
 
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  if (Object.keys(req.body).length > 0) {
+  if (req.body && Object.keys(req.body).length > 0) {
     console.log('Request body:', req.body);
   }
   next();
@@ -48,6 +47,6 @@ app.get('/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 }); 

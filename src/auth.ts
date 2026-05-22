@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { sendPasswordResetEmail } from './email';
+import { sendPasswordResetEmail } from './email.js';
 
 const prisma = new PrismaClient();
 const router = Router();

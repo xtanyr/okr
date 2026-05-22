@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useUserStore } from '../store/userStore';
 import api from '../api/axios';
+import axios from 'axios';
 
 function decodeToken(token: string): { exp?: number } | null {
   try {
@@ -23,8 +24,6 @@ function isTokenExpiringSoon(token: string): boolean {
   const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
   return expirationTime - now < sevenDaysInMs;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://92.124.137.137:4000';
 
 export default function TokenRefresh() {
   const token = useUserStore((s) => s.token);
@@ -50,7 +49,7 @@ export default function TokenRefresh() {
         const { token: newToken, user: updatedUser } = response.data;
         refreshToken(newToken, updatedUser);
         console.log('Token refreshed successfully');
-      } catch (error) {
+      } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           console.error(`Token refresh failed: ${error.response?.status} ${error.response?.data?.message}`);
           // If 401/403, token is invalid — log user out

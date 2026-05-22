@@ -9,7 +9,7 @@ import axios from 'axios';
 
 const queryClient = new QueryClient();
 
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'https://92.124.137.137:4000';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || '';
 
 axios.interceptors.request.use(config => {
   const token = localStorage.getItem('token');
