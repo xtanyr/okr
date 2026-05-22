@@ -21,7 +21,7 @@ import {
   Button,
   Tooltip
 } from '@mui/material';
-import { Delete as DeleteIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, ArrowBack as ArrowBackIcon, Archive as ArchiveIcon, Unarchive as UnarchiveIcon } from '@mui/icons-material';
 import api from '../api/axios';
 import { getUserAvatar, useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
@@ -32,6 +32,7 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
+  archived?: boolean;
 }
 
 const Users: React.FC = () => {
@@ -40,11 +41,13 @@ const Users: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [userToArchive, setUserToArchive] = useState<User | null>(null);
   const { user: currentUser } = useUserStore();
   const isAdmin = currentUser?.role === 'ADMIN';
 
   useEffect(() => {
-    api.get('/user/all')
+    api.get('/user/all?includeArchived=true')
       .then(res => setUsers(res.data))
       .catch(e => setError(e.response?.data?.error || 'Ошибка загрузки'))
       .finally(() => setLoading(false));
@@ -53,6 +56,36 @@ const Users: React.FC = () => {
   const handleDeleteClick = (user: User) => {
     setUserToDelete(user);
     setDeleteDialogOpen(true);
+  };
+
+  const handleArchiveClick = (user: User) => {
+    setUserToArchive(user);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (!userToArchive) return;
+    
+    try {
+      const newArchived = !userToArchive.archived;
+      await api.patch(`/user/${userToArchive.id}/archive`, { archived: newArchived });
+      
+      setUsers(users.map(u => 
+        u.id === userToArchive.id ? { ...u, archived: newArchived } : u
+      ));
+      toast.success(newArchived ? 'Пользователь архивирован' : 'Пользователь разархивирован');
+    } catch (error) {
+      toast.error('Ошибка при архивации пользователя');
+      console.error('Error archiving user:', error);
+    } finally {
+      setArchiveDialogOpen(false);
+      setUserToArchive(null);
+    }
+  };
+
+  const handleArchiveCancel = () => {
+    setArchiveDialogOpen(false);
+    setUserToArchive(null);
   };
 
   const handleDeleteConfirm = async () => {
@@ -110,6 +143,7 @@ const Users: React.FC = () => {
                 <TableCell>Имя</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Роль</TableCell>
+                <TableCell>Статус</TableCell>
                 {isAdmin && <TableCell align="right">Действия</TableCell>}
               </TableRow>
             </TableHead>
@@ -117,25 +151,37 @@ const Users: React.FC = () => {
               {users.map(u => {
                 const avatar = getUserAvatar(u.firstName, u.lastName, u.id || u.email);
                 return (
-                  <TableRow key={u.id}>
+                  <TableRow key={u.id} sx={u.archived ? { opacity: 0.6 } : {}}>
                     <TableCell>
                       <Avatar sx={{ bgcolor: avatar.color, width: 40, height: 40, fontSize: 18 }}>{avatar.initials}</Avatar>
                     </TableCell>
                     <TableCell>{u.firstName} {u.lastName}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>{u.role}</TableCell>
+                    <TableCell>{u.archived ? 'Архив' : 'Активен'}</TableCell>
                     {isAdmin && (
                       <TableCell align="right">
                         {u.id !== currentUser?.id && (
-                          <Tooltip title="Удалить пользователя">
-                            <IconButton 
-                              onClick={() => handleDeleteClick(u)}
-                              color="error"
-                              size="small"
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
+                          <>
+                            <Tooltip title={u.archived ? 'Разархивировать' : 'Архивировать'}>
+                              <IconButton 
+                                onClick={() => handleArchiveClick(u)}
+                                color={u.archived ? 'success' : 'warning'}
+                                size="small"
+                              >
+                                {u.archived ? <UnarchiveIcon /> : <ArchiveIcon />}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Удалить пользователя">
+                              <IconButton 
+                                onClick={() => handleDeleteClick(u)}
+                                color="error"
+                                size="small"
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </>
                         )}
                       </TableCell>
                     )}
@@ -165,6 +211,32 @@ const Users: React.FC = () => {
           </Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">
             Удалить
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={archiveDialogOpen}
+        onClose={handleArchiveCancel}
+        aria-labelledby="archive-dialog-title"
+      >
+        <DialogTitle id="archive-dialog-title">
+          {userToArchive?.archived ? 'Разархивировать пользователя' : 'Архивировать пользователя'}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {userToArchive?.archived 
+              ? `Вы уверены, что хотите разархивировать пользователя ${userToArchive?.firstName} ${userToArchive?.lastName}?`
+              : `Вы уверены, что хотите архивировать пользователя ${userToArchive?.firstName} ${userToArchive?.lastName}? Архивированный пользователь не будет отображаться в списке выбора на главной странице.`
+            }
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleArchiveCancel} color="primary">
+            Отмена
+          </Button>
+          <Button onClick={handleArchiveConfirm} color={userToArchive?.archived ? 'success' : 'warning'} variant="contained">
+            {userToArchive?.archived ? 'Разархивировать' : 'Архивировать'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -31,7 +31,7 @@ export default function Login() {
     setLoginError('');
     setIsLoading(true);
     try {
-      const res = await axios.post('/auth/login', data);
+      const res = await api.post('/auth/login', data);
       login(res.data.user, res.data.token);
       toast.success('Вход выполнен успешно!');
       navigate('/');

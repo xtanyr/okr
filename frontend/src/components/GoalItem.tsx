@@ -4,7 +4,7 @@ import ActionMenu from './ActionMenu';
 import type { KeyResult } from '../types';
 import KeyResultRow from './KeyResultRow';
 import api from '../api/axios';
-import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear } from '@mui/icons-material';
+import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear, PaintBrush } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -78,6 +78,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   const [, setSaving] = React.useState(false);
   // Rich comment editor state
   const [commentEditorKrId, setCommentEditorKrId] = React.useState<string | null>(null);
+  const [formatPainterMode, setFormatPainterMode] = React.useState<'inactive' | 'copy' | 'paste'>('inactive');
   const [commentHtml, setCommentHtml] = React.useState<string>('');
   const [savingComment, setSavingComment] = React.useState<boolean>(false);
   const editorRef = React.useRef<HTMLDivElement | null>(null);
@@ -678,19 +679,18 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   const getKrProgressPercent = (kr: KeyResult, factValue?: number | null): number => {
     const formula = (kr.formula || '').toLowerCase();
     const fact = typeof factValue === 'number' ? factValue : typeof kr.fact === 'number' ? kr.fact : 0;
+    const base = typeof kr.base === 'number' ? kr.base : 0;
+    const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+    const denom = plan - base;
+
+    if (denom === 0) return 0;
 
     if (formula === 'снижение') {
-      const base = typeof kr.base === 'number' ? kr.base : 0;
-      const plan = typeof kr.plan === 'number' ? kr.plan : 0;
-      const denom = base - plan;
-      if (denom === 0) return 0;
       const raw = ((base - fact) / denom) * 100;
       return Math.max(0, Math.min(Math.round(raw), 100));
     }
 
-    const plan = typeof kr.plan === 'number' ? kr.plan : 0;
-    if (plan <= 0) return 0;
-    const raw = (fact / plan) * 100;
+    const raw = ((fact - base) / denom) * 100;
     return Math.max(0, Math.min(Math.round(raw), 100));
   };
 
@@ -1045,7 +1045,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                           size="small"
                           type="number"
                           value={weeklyValues[kr.id]?.[week] ?? ''}
-                          onChange={e => handleWeeklyChange(kr.id, week, Number(e.target.value))}
+                          onChange={e => {
+                const val = e.target.value.replace(',', '.');
+                handleWeeklyChange(kr.id, week, Number(val));
+              }}
                           onBlur={() => handleWeeklySave(kr.id, week)}
                           autoFocus
                           sx={{ 
@@ -1225,6 +1228,23 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           <Tooltip title="Ссылка"><span><IconButton size="small" onClick={() => { const input = prompt('Введите URL'); if (input) { const url = ensureExternalUrl(input); document.execCommand('createLink', false, url); setSelectionLinkAttrs(); } }}><LinkIcon fontSize="small" /></IconButton></span></Tooltip>
           <Tooltip title="Удалить ссылку"><span><IconButton size="small" onClick={() => document.execCommand('unlink')}><LinkOff fontSize="small" /></IconButton></span></Tooltip>
                     <Tooltip title="Очистить форматирование"><span><IconButton size="small" onClick={() => document.execCommand('removeFormat')}><FormatClear fontSize="small" /></IconButton></span></Tooltip>
+<Tooltip title={formatPainterMode === 'inactive' ? 'Кисточка - скопировать формат' : formatPainterMode === 'copy' ? 'Теперь выберите текст для копирования формата' : 'Кликните по тексту для применения формата'}>
+            <span>
+              <IconButton 
+                size="small" 
+                onClick={() => {
+                  if (formatPainterMode === 'inactive') {
+                    setFormatPainterMode('copy');
+                  } else {
+                    setFormatPainterMode('inactive');
+                  }
+                }}
+                sx={formatPainterMode !== 'inactive' ? { backgroundColor: 'warning.main', color: 'white', '&:hover': { backgroundColor: 'warning.dark' } } : {}}
+              >
+                <PaintBrush fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
             <FormatColorText fontSize="small" />
             <input type="color" onChange={(e) => document.execCommand('foreColor', false, e.target.value)} style={{ width: 24, height: 24, border: 'none', background: 'transparent', padding: 0 }} />
@@ -1235,6 +1255,34 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           contentEditable
           suppressContentEditableWarning
           onInput={(e) => setCommentHtml((e.target as HTMLDivElement).innerHTML)}
+          onMouseUp={(e) => {
+            if (formatPainterMode !== 'inactive') {
+              const selection = window.getSelection();
+              if (!selection || selection.rangeCount === 0 || !selection.toString().trim()) return;
+              
+              if (formatPainterMode === 'copy') {
+                const range = selection.getRangeAt(0);
+                let node = range.commonAncestorContainer;
+                if (node.nodeType === 3) node = node.parentNode!;
+                const sourceEl = node as HTMLElement;
+                const targetText = selection.toString();
+                
+                const wrapper = document.createElement('span');
+                wrapper.innerHTML = targetText;
+                wrapper.style.cssText = sourceEl.style.cssText;
+                wrapper.style.fontWeight = window.getComputedStyle(sourceEl).fontWeight;
+                wrapper.style.fontStyle = window.getComputedStyle(sourceEl).fontStyle;
+                wrapper.style.textDecoration = window.getComputedStyle(sourceEl).textDecoration;
+                wrapper.style.color = window.getComputedStyle(sourceEl).color;
+                wrapper.style.backgroundColor = window.getComputedStyle(sourceEl).backgroundColor;
+                
+                range.deleteContents();
+                range.insertNode(wrapper);
+                setCommentHtml(e.currentTarget.innerHTML);
+                setFormatPainterMode('inactive');
+              }
+            }
+          }}
           sx={{
             minHeight: 220,
             border: '1px solid #e0e0e0',

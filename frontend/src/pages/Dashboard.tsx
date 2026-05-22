@@ -130,7 +130,23 @@ const Dashboard = () => {
           return;
         }
         
-        let progress = (kr.fact / kr.plan) * 100;
+        const base = typeof kr.base === 'number' ? kr.base : 0;
+        const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+        const fact = typeof kr.fact === 'number' ? kr.fact : 0;
+        
+        const denom = plan - base;
+        if (denom === 0) {
+          keyResultsDebug.push({
+            title: kr.title,
+            progress: 0
+          });
+          goalTotalProgress += 0;
+          validKeyResults++;
+          hasKeyResultsWithPlan = true;
+          return;
+        }
+        
+        let progress = ((fact - base) / denom) * 100;
         progress = Math.min(progress, 100);
         progress = Math.max(0, progress);
         

@@ -29,9 +29,12 @@ const KeyResultTableHeader: React.FC<KeyResultTableHeaderProps> = ({
     let validKRs = 0;
 
     keyResults.forEach(kr => {
-      if (kr.plan > 0 && kr.weeklyValues?.[week] !== undefined) {
+      const base = typeof kr.base === 'number' ? kr.base : 0;
+      const plan = typeof kr.plan === 'number' ? kr.plan : 0;
+      const denom = plan - base;
+      if (denom !== 0 && kr.weeklyValues?.[week] !== undefined) {
         const weekValue = kr.weeklyValues[week] || 0;
-        const progress = (weekValue / kr.plan) * 100;
+        const progress = ((weekValue - base) / denom) * 100;
         totalProgress += progress;
         validKRs++;
       }

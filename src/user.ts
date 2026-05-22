@@ -26,8 +26,11 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 
 // Получить список всех пользователей (только просмотр)
 router.get('/all', requireAuth, async (req: AuthRequest, res) => {
+  const includeArchived = req.query.includeArchived === 'true';
+  
   const users = await prisma.user.findMany({
-    select: { id: true, email: true, firstName: true, lastName: true, role: true },
+    where: includeArchived ? {} : { archived: false },
+    select: { id: true, email: true, firstName: true, lastName: true, role: true, archived: true },
   });
   res.json(users);
 });
@@ -131,6 +134,47 @@ router.delete('/:userId', requireAuth, async (req: AuthRequest, res) => {
     console.error('Error deleting user:', error);
     res.status(500).json({ 
       error: 'Ошибка при удалении пользователя',
+      details: error instanceof Error ? error.message : 'Неизвестная ошибка'
+    });
+  }
+});
+
+// Архивировать/разархивировать пользователя (только admin)
+router.patch('/:userId/archive', requireAuth, async (req: AuthRequest, res) => {
+  const { userId } = req.params;
+  const { archived } = req.body;
+  
+  if (typeof archived !== 'boolean') {
+    return res.status(400).json({ error: 'Поле archived должно быть boolean' });
+  }
+  
+  // Check if user is admin
+  const currentUser = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { role: true }
+  });
+
+  if (currentUser?.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Требуются права администратора' });
+  }
+
+  // Prevent archiving/unarchiving self
+  if (req.user!.userId === userId) {
+    return res.status(400).json({ error: 'Нельзя архивировать самого себя' });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { archived },
+      select: { id: true, email: true, firstName: true, lastName: true, role: true, archived: true },
+    });
+    
+    res.json(user);
+  } catch (error) {
+    console.error('Error archiving user:', error);
+    res.status(500).json({ 
+      error: 'Ошибка при архивации пользователя',
       details: error instanceof Error ? error.message : 'Неизвестная ошибка'
     });
   }

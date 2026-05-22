@@ -1,7 +1,7 @@
 import React from 'react';
-import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
+import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress, ListSubheader } from '@mui/material';
 import UserAvatar from './UserAvatar';
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import api from '../api/axios';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArchiveIcon from '@mui/icons-material/Archive';
@@ -38,9 +38,16 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
   const [archiving, setArchiving] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const selectedOkr = useRef<{ id: string; archived: boolean } | null>(null);
+  const [userSearch, setUserSearch] = useState('');
 
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const filteredUsers = useMemo(() => {
+    if (!userSearch.trim()) return users;
+    const search = userSearch.toLowerCase();
+    return users.filter(u => u.name.toLowerCase().includes(search));
+  }, [users, userSearch]);
 
   const createNewOkr = async (type = sessionType, year = sessionYear) => {
     setCreating(true);
@@ -171,6 +178,14 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
 
         {/* Second Row: User Select */}
         <Box sx={{ mb: 2 }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Поиск пользователя..."
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            sx={{ mb: 1 }}
+          />
           <FormControl fullWidth size="small">
             <InputLabel id="user-select-label-mobile">Пользователь</InputLabel>
             <Select
@@ -180,11 +195,14 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
               label="Пользователь"
               onChange={(e) => onUserChange(e.target.value)}
             >
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <MenuItem key={user.id} value={user.id}>
                   {user.name}
                 </MenuItem>
               ))}
+              {filteredUsers.length === 0 && userSearch && (
+                <MenuItem disabled>Не найден</MenuItem>
+              )}
             </Select>
           </FormControl>
         </Box>
@@ -256,6 +274,13 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
           <UserAvatar size={48} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TextField
+            size="small"
+            placeholder="Поиск..."
+            value={userSearch}
+            onChange={(e) => setUserSearch(e.target.value)}
+            sx={{ width: 120 }}
+          />
           <FormControl sx={{ minWidth: 200 }}>
             <InputLabel id="user-select-label">Пользователь</InputLabel>
             <Select
@@ -265,11 +290,14 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
               label="Пользователь"
               onChange={(e) => onUserChange(e.target.value)}
             >
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <MenuItem key={user.id} value={user.id}>
                   {user.name}
                 </MenuItem>
               ))}
+              {filteredUsers.length === 0 && userSearch && (
+                <MenuItem disabled>Не найден</MenuItem>
+              )}
             </Select>
           </FormControl>
         </Box>

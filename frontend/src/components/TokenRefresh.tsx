@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useUserStore } from '../store/userStore';
-import axios from 'axios';
+import api from '../api/axios';
 
 function decodeToken(token: string): { exp?: number } | null {
   try {
@@ -24,7 +24,7 @@ function isTokenExpiringSoon(token: string): boolean {
   return expirationTime - now < sevenDaysInMs;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://92.124.137.137:4000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://92.124.137.137:4000';
 
 export default function TokenRefresh() {
   const token = useUserStore((s) => s.token);
@@ -39,11 +39,11 @@ export default function TokenRefresh() {
       if (!isTokenExpiringSoon(token)) return;
 
       try {
-        const response = await axios.post(
-          `${API_URL}/auth/refresh`,  // ← try this path, or check your backend
-          { refreshToken: token },     // ← most backends expect this field name
+        const response = await api.post(
+          `/auth/refresh`,
+          { refreshToken: token },
           {
-            headers: { Authorization: `Bearer ${token}` }, // some backends need this too
+            headers: { Authorization: `Bearer ${token}` },
           }
         );
 

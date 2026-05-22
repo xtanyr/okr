@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -42,7 +42,7 @@ export default function Register() {
 
     setIsLoading(true);
     try {
-      const response = await axios.post('/auth/register', {
+      const response = await api.post('/auth/register', {
         email: data.email,
         password: data.password,
         passwordConfirm: data.passwordConfirm,

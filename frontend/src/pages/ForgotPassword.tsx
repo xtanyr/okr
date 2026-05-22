@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
@@ -18,7 +18,7 @@ export default function ForgotPassword() {
   const onSubmit = async (data: ForgotPasswordForm) => {
     setIsLoading(true);
     try {
-      await axios.post('/auth/forgot-password', { email: data.email });
+      await api.post('/auth/forgot-password', { email: data.email });
       setEmailSent(true);
       toast.success('Если аккаунт с таким email существует, на него было отправлено письмо с инструкциями.');
     } catch (error: any) {

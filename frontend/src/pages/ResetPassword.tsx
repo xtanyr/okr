@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
@@ -32,7 +32,7 @@ export default function ResetPassword() {
     
     setIsSubmitting(true);
     try {
-      await axios.post('/auth/reset-password', {
+      await api.post('/auth/reset-password', {
         token,
         password: data.password,
         passwordConfirm: data.passwordConfirm,
