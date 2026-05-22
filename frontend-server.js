@@ -10,23 +10,16 @@ const app = express();
 const PORT = process.env.FRONTEND_PORT || 4001;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:4000';
 
-// Parse JSON bodies **only** for API paths (required for reliable proxying of POST/PUT)
-app.use(['/auth', '/user', '/okr', '/health'], express.json());
-
-// Proxy middleware with body re-attachment (fixes req.body === undefined on backend)
+// Proxy API routes (raw streaming — no body parsing here)
 const apiProxy = createProxyMiddleware({
   target: BACKEND_URL,
   changeOrigin: true,
   ws: true,
   logLevel: 'warn',
-  onProxyReq: (proxyReq, req) => {
-    if (req.body) {
-      const bodyData = JSON.stringify(req.body);
-      proxyReq.setHeader('Content-Type', 'application/json');
-      proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
-      proxyReq.write(bodyData);
-    }
-  },
+  onError: (err, req, res) => {
+    console.error('Proxy error:', err);
+    res.status(502).json({ error: 'Proxy error' });
+  }
 });
 
 app.use('/auth', apiProxy);
@@ -34,7 +27,7 @@ app.use('/user', apiProxy);
 app.use('/okr', apiProxy);
 app.use('/health', apiProxy);
 
-// Serve production frontend build
+// Serve production frontend
 const distPath = path.join(__dirname, 'frontend/dist');
 app.use(express.static(distPath));
 
@@ -45,6 +38,6 @@ app.get(/.*/, (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Production Frontend + API Proxy running on port ${PORT}`);
-  console.log(`   Frontend static: ${distPath}`);
-  console.log(`   API proxy → ${BACKEND_URL} for /auth, /user, /okr, /health`);
+  console.log(`   Frontend: ${distPath}`);
+  console.log(`   API proxy → ${BACKEND_URL}`);
 });
