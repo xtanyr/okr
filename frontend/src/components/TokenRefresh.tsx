@@ -47,7 +47,7 @@ export default function TokenRefresh() {
         );
 
         const { token: newToken, user: updatedUser } = response.data;
-        refreshToken(newToken, updatedUser);
+        if (updatedUser) refreshToken(newToken, updatedUser);
         console.log('Token refreshed successfully');
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {

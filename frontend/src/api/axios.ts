@@ -68,7 +68,9 @@ api.interceptors.request.use(
           try {
             const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
             const { token: newToken, user } = response.data;
-            useUserStore.getState().refreshToken(newToken, user);
+            if (user) {
+              useUserStore.getState().refreshToken(newToken, user);
+            }
             config.headers.Authorization = `Bearer ${newToken}`;
             isRefreshing = false;
             processQueue(null, newToken);
@@ -118,7 +120,9 @@ api.interceptors.response.use(
         try {
           const response = await axios.post(`${import.meta.env.VITE_API_URL || ''}/auth/refresh-token`, { token });
           const { token: newToken, user } = response.data;
-          useUserStore.getState().refreshToken(newToken, user);
+          if (user) {
+            useUserStore.getState().refreshToken(newToken, user);
+          }
           
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${newToken}`;

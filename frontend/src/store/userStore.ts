@@ -23,6 +23,7 @@ export const useUserStore = create<UserStore>((set) => ({
   user: null,
   token: null,
   login: (user: User, token: string) => {
+    if (!user) return;
     set((state) => ({ ...state, user, token }));
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -33,6 +34,7 @@ export const useUserStore = create<UserStore>((set) => ({
     localStorage.removeItem('user');
   },
   register: (user: User, token: string) => {
+    if (!user) return;
     set((state) => ({ ...state, user, token }));
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -43,6 +45,7 @@ export const useUserStore = create<UserStore>((set) => ({
     else localStorage.removeItem('user');
   },
   refreshToken: (token: string, user: User) => {
+    if (!user) return; // prevent storing "undefined"
     set((state) => ({ ...state, token, user }));
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -61,7 +64,19 @@ export function getUserAvatar(firstName: string, lastName: string, idOrEmail?: s
 
 
 const token = localStorage.getItem('token');
-const user = localStorage.getItem('user');
-if (token && user) {
-  useUserStore.setState((state) => ({ ...state, token, user: JSON.parse(user) }));
-} 
+const userStr = localStorage.getItem('user');
+
+if (token && userStr) {
+  try {
+    const parsedUser = JSON.parse(userStr);
+    if (parsedUser) {
+      useUserStore.setState((state) => ({ ...state, token, user: parsedUser }));
+    } else {
+      localStorage.removeItem('user');
+    }
+  } catch (e) {
+    console.warn('Corrupted user data in localStorage — clearing it');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  }
+}
