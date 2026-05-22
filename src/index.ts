@@ -6,6 +6,11 @@ import authRouter from './auth.js';
 import userRouter from './user.js';
 import okrRouter from './okr.js';
 import { Request, Response, NextFunction } from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Инициализация переменных окружения
 dotenv.config();
@@ -44,6 +49,16 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+// === Serve frontend (so this process can handle root traffic
+// if the outer proxy sends non-API paths here)
+const distPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(distPath));
+
+// SPA fallback for client-side routing (must come after API routes)
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 const PORT = parseInt(process.env.PORT || '4001', 10);
