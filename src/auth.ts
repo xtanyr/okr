@@ -123,8 +123,13 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // Send email with reset link
+    const requestOrigin = req.get('origin');
     const frontendBaseUrl = getFrontendBaseUrl(req);
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
+    console.log('[password-reset] request origin:', requestOrigin || '(none)');
+    console.log('[password-reset] resolved frontend base URL:', frontendBaseUrl);
+    console.log('[password-reset] sending reset email to:', email);
+    console.log('[password-reset] reset URL:', resetUrl);
     try {
       await sendPasswordResetEmail(email, resetUrl);
     } catch (mailError) {
