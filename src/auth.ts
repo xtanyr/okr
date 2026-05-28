@@ -11,6 +11,20 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const REGISTRATION_CODE = process.env.REGISTRATION_CODE || 'okr2025';
 
+function getFrontendBaseUrl(req: { get: (header: string) => string | undefined }): string {
+  const configuredUrl = process.env.FRONTEND_URL;
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, '');
+  }
+
+  const origin = req.get('origin');
+  if (origin) {
+    return origin.replace(/\/+$/, '');
+  }
+
+  return 'http://localhost:3000';
+}
+
 // Генерация аватарки: первые две буквы имени + случайный фон (цвет)
 function generateAvatar(name: string) {
   const initials = name.slice(0, 2).toUpperCase();
@@ -98,7 +112,8 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // Send email with reset link
-    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}reset-password?token=${resetToken}`;
+    const frontendBaseUrl = getFrontendBaseUrl(req);
+    const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
     await sendPasswordResetEmail(email, resetUrl);
 
     res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
