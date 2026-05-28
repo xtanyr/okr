@@ -86,6 +86,7 @@ router.post('/login', async (req, res) => {
 // Password reset request
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
+  const successMessage = 'If an account with that email exists, a password reset link has been sent.';
   
   if (!email) {
     return res.status(400).json({ error: 'Email is required' });
@@ -96,7 +97,7 @@ router.post('/forgot-password', async (req, res) => {
     
     // Always return success to prevent email enumeration
     if (!user) {
-      return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+      return res.json({ message: successMessage });
     }
 
     // Generate reset token (valid for 1 hour)
@@ -114,12 +115,17 @@ router.post('/forgot-password', async (req, res) => {
     // Send email with reset link
     const frontendBaseUrl = getFrontendBaseUrl(req);
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
-    await sendPasswordResetEmail(email, resetUrl);
+    try {
+      await sendPasswordResetEmail(email, resetUrl);
+    } catch (mailError) {
+      // Keep endpoint response consistent to avoid account enumeration and user-facing 500s.
+      console.error('Password reset email send failed:', mailError);
+    }
 
-    res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+    res.json({ message: successMessage });
   } catch (error) {
     console.error('Password reset error:', error);
-    res.status(500).json({ error: 'Error processing password reset request' });
+    res.json({ message: successMessage });
   }
 });
 
