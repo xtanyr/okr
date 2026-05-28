@@ -19,10 +19,20 @@ function getFrontendBaseUrl(req: { get: (header: string) => string | undefined }
 
   const origin = req.get('origin');
   if (origin) {
-    return origin.replace(/\/+$/, '');
+    try {
+      const parsedOrigin = new URL(origin);
+      const hostname = parsedOrigin.hostname.toLowerCase();
+      const isLocalOrigin = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+
+      if (!isLocalOrigin) {
+        return origin.replace(/\/+$/, '');
+      }
+    } catch {
+      // Ignore invalid origin header values and use default fallback.
+    }
   }
 
-  return 'http://localhost:3000';
+  return 'https://okr.scr-tech.ru';
 }
 
 // Генерация аватарки: первые две буквы имени + случайный фон (цвет)

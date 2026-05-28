@@ -83,6 +83,6 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
     return info;
   } catch (error) {
     console.error('Error sending password reset email:', error);
-    throw new Error('Failed to send password reset email');
+    return null;
   }
 }
