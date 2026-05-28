@@ -11,24 +11,37 @@ const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const REGISTRATION_CODE = process.env.REGISTRATION_CODE || 'okr2025';
 
+function isLocalHostname(hostname: string): boolean {
+  const normalized = hostname.toLowerCase();
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+}
+
+function normalizeNonLocalUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (isLocalHostname(parsed.hostname)) {
+      return null;
+    }
+    return url.replace(/\/+$/, '');
+  } catch {
+    return null;
+  }
+}
+
 function getFrontendBaseUrl(req: { get: (header: string) => string | undefined }): string {
   const configuredUrl = process.env.FRONTEND_URL;
   if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, '');
+    const normalizedConfiguredUrl = normalizeNonLocalUrl(configuredUrl);
+    if (normalizedConfiguredUrl) {
+      return normalizedConfiguredUrl;
+    }
   }
 
   const origin = req.get('origin');
   if (origin) {
-    try {
-      const parsedOrigin = new URL(origin);
-      const hostname = parsedOrigin.hostname.toLowerCase();
-      const isLocalOrigin = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-
-      if (!isLocalOrigin) {
-        return origin.replace(/\/+$/, '');
-      }
-    } catch {
-      // Ignore invalid origin header values and use default fallback.
+    const normalizedOrigin = normalizeNonLocalUrl(origin);
+    if (normalizedOrigin) {
+      return normalizedOrigin;
     }
   }
 
@@ -126,6 +139,7 @@ router.post('/forgot-password', async (req, res) => {
     const requestOrigin = req.get('origin');
     const frontendBaseUrl = getFrontendBaseUrl(req);
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
+    console.log('[password-reset] FRONTEND_URL env:', process.env.FRONTEND_URL || '(not set)');
     console.log('[password-reset] request origin:', requestOrigin || '(none)');
     console.log('[password-reset] resolved frontend base URL:', frontendBaseUrl);
     console.log('[password-reset] sending reset email to:', email);
