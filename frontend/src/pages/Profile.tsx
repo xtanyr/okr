@@ -5,6 +5,7 @@ import { useUserStore, getUserAvatar } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import StarBackground from '../components/StarBackground';
+import { APP_NAME } from '../config/appName';
 
 const Profile: React.FC = () => {
   const user = useUserStore((s) => s.user);
@@ -111,7 +112,7 @@ const Profile: React.FC = () => {
             <ArrowBackIcon />
           </IconButton>
           <Typography variant="h5" component="h1">
-            OKR
+            {APP_NAME}
           </Typography>
         </Box>
         <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: '100%' }}>

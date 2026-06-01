@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { APP_NAME } from './config/appName';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -12,6 +14,10 @@ import Users from './pages/Users';
 import TokenRefresh from './components/TokenRefresh';
 
 export default function App() {
+  useEffect(() => {
+    document.title = APP_NAME;
+  }, []);
+
   return (
     <Router>
       <TokenRefresh />

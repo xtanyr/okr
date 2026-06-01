@@ -6,6 +6,7 @@ import { useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
+import { APP_NAME } from '../config/appName';
 
 interface LoginForm {
   email: string;
@@ -66,7 +67,7 @@ export default function Login() {
           {/* Welcome Text */}
           <div>
             <h1 className={styles.title}>Добро пожаловать</h1>
-            <p className={styles.subtitle}>Войдите в свой аккаунт OKR</p>
+            <p className={styles.subtitle}>Войдите в {APP_NAME}</p>
           </div>
 
           {/* Form */}
