@@ -27,6 +27,12 @@ app.use('/user', apiProxy);
 app.use('/okr', apiProxy);
 app.use('/health', apiProxy);
 
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) return next(err);
+  console.error('Proxy error:', err.message || err);
+  res.status(502).json({ error: 'Backend unavailable' });
+});
+
 // Serve production frontend
 const distPath = path.join(__dirname, 'frontend/dist');
 app.use(express.static(distPath));
