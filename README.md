@@ -128,21 +128,21 @@ server {
 
     # Прокси к backend API (порт 4000 по коду)
     location /auth {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
     }
     location /user {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
     }
     location /okr {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

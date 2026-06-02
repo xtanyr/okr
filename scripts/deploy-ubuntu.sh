@@ -100,21 +100,21 @@ NGINX_CONF="server {
     }
 
     location /auth {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection \"upgrade\";
         proxy_set_header Host $host;
     }
     location /user {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection \"upgrade\";
         proxy_set_header Host $host;
     }
     location /okr {
-        proxy_pass http://127.0.0.1:4000;
+        proxy_pass http://127.0.0.1:3200;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection \"upgrade\";
@@ -137,8 +137,9 @@ $SUDO systemctl enable --now okr-backup.timer || true
 echo "[10/10] Verifying health endpoint (if available)" >&2
 set +e
 IP_ADDR=$(hostname -I | awk '{print $1}')
-curl -fsS "http://127.0.0.1:4000/health" || true
+curl -fsS "http://127.0.0.1:3200/health" || true
 echo
 echo "Deployment complete. Open: http://$IP_ADDR" >&2
+
 
 

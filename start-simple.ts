@@ -23,8 +23,8 @@ const app = express();
 const frontendApp = express();
 
 // Support both PORT and BACKEND_PORT for compatibility
-const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : (process.env.PORT ? parseInt(process.env.PORT) : 4000);
-const FRONTEND_PORT = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3000;
+const BACKEND_PORT = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : (process.env.PORT ? parseInt(process.env.PORT) : 3200);
+const FRONTEND_PORT = process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 3201;
 
 // Initialize Prisma client
 const prisma = new PrismaClient();

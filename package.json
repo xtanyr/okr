@@ -12,7 +12,7 @@
     "start": "node dist/index.js",
     "start:dev": "tsx watch src/index.ts",
     "build:frontend": "cd frontend && npm run build",
-    "start:frontend": "cd frontend && npx serve -s dist -l 3000",
+    "start:frontend": "cd frontend && npx serve -s dist -l 3201",
     "start:frontend:port": "cd frontend && npx serve -s dist -l",
     "build:all": "npm run build && npm run build:frontend",
     "start:unified": "node server.js",

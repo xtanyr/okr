@@ -9,8 +9,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // === Configuration ===
-const PORT = process.env.PORT || 4000;                    // Public port (what your reverse proxy / panel should point to)
-const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:4001';
+const PORT = process.env.PORT || 3200;                    // Public port (what your reverse proxy / panel should point to)
+const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:3201';
 
 // === API Proxy (only these paths go to backend) ===
 const apiProxy = createProxyMiddleware({
@@ -45,3 +45,4 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   API routes proxied to: ${BACKEND_URL}`);
   console.log(`   Listening on all interfaces (0.0.0.0)\n`);
 });
+

@@ -6,11 +6,11 @@ export default defineConfig({
   base: '/',  // Добавляем базовый URL
   plugins: [react()],
   server: {
-    port: 4001,  // Явно указываем порт
+    port: 3201,  // Явно указываем порт
     proxy: {
-      '/auth': 'http://localhost:4000/',
-      '/user': 'http://localhost:4000/',
-      '/okr': 'http://localhost:4000/',
+      '/auth': 'http://localhost:3200/',
+      '/user': 'http://localhost:3200/',
+      '/okr': 'http://localhost:3200/',
     },
   },
   build: {
@@ -31,3 +31,4 @@ export default defineConfig({
     }
   }
 })
+

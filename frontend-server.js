@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.FRONTEND_PORT || 4001;
-const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:4000';
+const PORT = process.env.FRONTEND_PORT || 3201;
+const BACKEND_URL = process.env.BACKEND_URL || 'http://127.0.0.1:3200';
 
 // Proxy API routes (raw streaming — no body parsing here)
 const apiProxy = createProxyMiddleware({
