@@ -1,4 +1,4 @@
-#!/usr/bin/env -S node --loader tsx
+#!/usr/bin/env -S node --import tsx
 
 import express from 'express';
 import cors from 'cors';

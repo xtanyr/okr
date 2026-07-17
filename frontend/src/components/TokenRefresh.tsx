@@ -39,8 +39,8 @@ export default function TokenRefresh() {
 
       try {
         const response = await api.post(
-          `/auth/refresh`,
-          { refreshToken: token },
+          `/auth/refresh-token`,
+          { token },
           {
             headers: { Authorization: `Bearer ${token}` },
           }

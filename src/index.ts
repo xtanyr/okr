@@ -61,7 +61,7 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-const PORT = parseInt(process.env.PORT || '4001', 10);
+const PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || '4001', 10);
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 }); 

@@ -4,23 +4,25 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Create a test account for development if no SMTP settings are provided
-let transporter: nodemailer.Transporter;
+let transporter: nodemailer.Transporter | undefined;
 
-if (process.env.NODE_ENV === 'production' || (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)) {
-  // Use real SMTP in production or when SMTP settings are provided
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.yandex.ru',
-    port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-  console.log('Using real SMTP email service');
-} else {
-  // Fallback to ethereal.email for development
-  (async () => {
+async function initTransporter() {
+  if (transporter) return transporter;
+
+  if (process.env.NODE_ENV === 'production' || (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)) {
+    // Use real SMTP in production or when SMTP settings are provided
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.yandex.ru',
+      port: parseInt(process.env.SMTP_PORT || '465'),
+      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    console.log('Using real SMTP email service');
+  } else {
+    // Fallback to ethereal.email for development
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
       host: 'smtp.ethereal.email',
@@ -33,12 +35,15 @@ if (process.env.NODE_ENV === 'production' || (process.env.SMTP_HOST && process.e
     });
     console.log('Using Ethereal test email service');
     console.log('Ethereal test account created:', testAccount);
-  })();
+  }
+
+  return transporter;
 }
 
 // Function to send password reset email
 export async function sendPasswordResetEmail(email: string, resetUrl: string) {
   try {
+    const mailTransporter = await initTransporter();
     const mailOptions = {
       from: `"OKR System" <${process.env.EMAIL_FROM || process.env.SMTP_USER || 'noreply@okr-system.com'}>`,
       to: email,
@@ -72,7 +77,7 @@ export async function sendPasswordResetEmail(email: string, resetUrl: string) {
     };
 
     // Send the email
-    const info = await transporter.sendMail(mailOptions);
+    const info = await mailTransporter.sendMail(mailOptions);
     
     // Log the email in development
     if (process.env.NODE_ENV !== 'production') {
