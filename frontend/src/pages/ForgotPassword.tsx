@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
@@ -21,8 +22,8 @@ export default function ForgotPassword() {
       await api.post('/auth/forgot-password', { email: data.email });
       setEmailSent(true);
       toast.success('Если аккаунт с таким email существует, на него было отправлено письмо с инструкциями.');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Произошла ошибка. Пожалуйста, попробуйте снова.';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof AxiosError ? error.response?.data?.error || error.message : 'Произошла ошибка. Пожалуйста, попробуйте снова.';
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);

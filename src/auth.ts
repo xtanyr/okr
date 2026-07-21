@@ -139,15 +139,9 @@ router.post('/forgot-password', async (req, res) => {
     const requestOrigin = req.get('origin');
     const frontendBaseUrl = getFrontendBaseUrl(req);
     const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
-    console.log('[password-reset] FRONTEND_URL env:', process.env.FRONTEND_URL || '(not set)');
-    console.log('[password-reset] request origin:', requestOrigin || '(none)');
-    console.log('[password-reset] resolved frontend base URL:', frontendBaseUrl);
-    console.log('[password-reset] sending reset email to:', email);
-    console.log('[password-reset] reset URL:', resetUrl);
     try {
       await sendPasswordResetEmail(email, resetUrl);
     } catch (mailError) {
-      // Keep endpoint response consistent to avoid account enumeration and user-facing 500s.
       console.error('Password reset email send failed:', mailError);
     }
 
@@ -217,12 +211,12 @@ router.post('/refresh-token', async (req, res) => {
 
   try {
     // Verify token (allow expired tokens for refresh within grace period)
-    let payload: any;
+    let payload: { userId: string; role: string } | null = null;
     try {
       payload = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If token is expired, try to decode it anyway (for refresh grace period)
-      if (error.name === 'TokenExpiredError') {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
         const decoded = jwt.decode(token) as { userId: string; role: string } | null;
         if (decoded && decoded.userId) {
           payload = decoded;

@@ -4,6 +4,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useUserStore, getUserAvatar } from '../store/userStore';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import StarBackground from '../components/StarBackground';
 
 const Profile: React.FC = () => {
@@ -41,8 +42,8 @@ const Profile: React.FC = () => {
       const res = await api.patch('/user/me', { firstName, lastName });
       setUser({ ...user, firstName: res.data.firstName, lastName: res.data.lastName });
       setNameSuccess(true);
-    } catch (e: any) {
-      setNameError(e.response?.data?.error || 'Ошибка обновления профиля');
+    } catch (e: unknown) {
+      setNameError(e instanceof AxiosError ? e.response?.data?.error || e.message : 'Ошибка обновления профиля');
     } finally {
       setNameLoading(false);
     }
@@ -59,8 +60,8 @@ const Profile: React.FC = () => {
       setOldPassword('');
       setNewPassword('');
       setNewPasswordConfirm('');
-    } catch (e: any) {
-      setPassError(e.response?.data?.error || 'Ошибка смены пароля');
+    } catch (e: unknown) {
+      setPassError(e instanceof AxiosError ? e.response?.data?.error || e.message : 'Ошибка смены пароля');
     } finally {
       setPassLoading(false);
     }

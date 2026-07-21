@@ -13,6 +13,8 @@ import {
   Typography 
 } from '@mui/material';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
+import { calcProgressPercent } from '../utils/progress';
 import OkrHeader from '../components/OkrHeader';
 import EmptyState from '../components/dashboard/EmptyState';
 import OkrTabs from '../components/dashboard/OkrTabs';
@@ -36,6 +38,12 @@ interface OKR {
   userId: string;
   startDate?: string;
   endDate?: string;
+}
+
+interface UserSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
 }
 
 const Dashboard = () => {
@@ -133,22 +141,8 @@ const Dashboard = () => {
         const base = typeof kr.base === 'number' ? kr.base : 0;
         const plan = typeof kr.plan === 'number' ? kr.plan : 0;
         const fact = typeof kr.fact === 'number' ? kr.fact : 0;
-        
-        const denom = plan - base;
-        if (denom === 0) {
-          keyResultsDebug.push({
-            title: kr.title,
-            progress: 0
-          });
-          goalTotalProgress += 0;
-          validKeyResults++;
-          hasKeyResultsWithPlan = true;
-          return;
-        }
-        
-        let progress = ((fact - base) / denom) * 100;
-        progress = Math.min(progress, 100);
-        progress = Math.max(0, progress);
+
+        const progress = calcProgressPercent(base, plan, fact);
         
         if (isFinite(progress)) {
           keyResultsDebug.push({
@@ -246,9 +240,9 @@ const Dashboard = () => {
       setAddDialogOpen(false);
       await reloadOkrs();
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Ошибка при создании OKR:', error);
-      if (error.response?.data?.error) {
+      if (error instanceof AxiosError && error.response?.data?.error) {
         setError(error.response.data.error);
       } else {
         setError('Произошла ошибка при создании OKR');
@@ -329,8 +323,8 @@ const Dashboard = () => {
         const response = await api.get('/user/all');
         if (Array.isArray(response?.data)) {
           const userList = response.data
-            .filter((u: any) => u?.id && u?.firstName && u?.lastName)
-            .map((u: any) => ({
+            .filter((u: UserSummary) => u?.id && u?.firstName && u?.lastName)
+            .map((u: UserSummary) => ({
               id: u.id,
               name: `${u.firstName} ${u.lastName}`.trim()
             }));

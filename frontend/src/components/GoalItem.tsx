@@ -7,6 +7,10 @@ import api from '../api/axios';
 import { FormatBold, FormatItalic, FormatUnderlined, Link as LinkIcon, StrikethroughS, FormatListBulleted, FormatListNumbered, FormatColorText, Undo, Redo, LinkOff, FormatClear, FormatPaint } from '@mui/icons-material';
 import KeyResultTableHeader from './KeyResultTableHeader';
 import { useQueryClient } from '@tanstack/react-query';
+import { calcFact } from '../utils/okr';
+import { calcProgressPercent } from '../utils/progress';
+import { getCurrentWeek, getCalendarWeeksInPeriod, getWeekRangesForPeriod } from '../utils/weeks';
+import DOMPurify from 'dompurify';
 
 
 interface Goal {
@@ -57,6 +61,22 @@ const formatWeeklyValue = (value: number | null | undefined): string => {
   }
 };
 
+const sanitizeHtml = (html: string): string => {
+  if (!html) return '';
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ul', 'ol', 'li', 'span'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'style'],
+    ALLOW_DATA_ATTR: false,
+  });
+};
+
+interface WeeklyMonitoringEntry {
+  weekNumber: number;
+  value: number;
+}
+
+const isValidHexColor = (color: string): boolean => /^#[0-9a-fA-F]{6}$/.test(color);
+
 const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR, onDeleteGoal, onDeleteKR, onDuplicateGoal, archived, startDate, endDate, readOnly = false }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -105,108 +125,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     }
   }, [commentEditorKrId, commentHtml]);
 
-  // useEffect: обновлять локальное состояние инициативы только если оно реально изменилось на сервере
-  React.useEffect(() => {
-    // No need to update initiatives here as the field is removed
-  }, []);
-
-  // Helper functions for weekly monitoring
-  const getCurrentWeek = () => {
-    const date = new Date();
-    const target = new Date(date.valueOf());
-    const dayOfWeek = target.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(target);
-    monday.setDate(target.getDate() + mondayOffset);
-    const yearStart = new Date(target.getFullYear(), 0, 1);
-    const yearStartDay = yearStart.getDay();
-    const firstMondayOffset = yearStartDay === 0 ? -6 : 1 - yearStartDay;
-    const firstMonday = new Date(yearStart);
-    firstMonday.setDate(yearStart.getDate() + firstMondayOffset);
-    if (firstMonday.getDate() > 4) {
-      firstMonday.setDate(firstMonday.getDate() - 7);
-    }
-    const daysDiff = Math.floor((monday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.floor(daysDiff / 7);
-  };
-
-  const getWeekNumber = (date: Date): number => {
-    const target = new Date(date.valueOf());
-    const dayOfWeek = target.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(target);
-    monday.setDate(target.getDate() + mondayOffset);
-    const yearStart = new Date(target.getFullYear(), 0, 1);
-    const yearStartDay = yearStart.getDay();
-    const firstMondayOffset = yearStartDay === 0 ? -6 : 1 - yearStartDay;
-    const firstMonday = new Date(yearStart);
-    firstMonday.setDate(yearStart.getDate() + firstMondayOffset);
-    if (firstMonday.getDate() > 4) {
-      firstMonday.setDate(firstMonday.getDate() - 7);
-    }
-    const daysDiff = Math.floor((monday.getTime() - firstMonday.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.floor(daysDiff / 7);
-  };
-
-  const getCalendarWeeksInPeriod = (startDate: Date, endDate: Date): number[] => {
-    const weeks: number[] = [];
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const weekNumber = getWeekNumber(currentDate);
-      if (!weeks.includes(weekNumber)) {
-        weeks.push(weekNumber);
-      }
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-    return weeks.sort((a, b) => a - b);
-  };
-
-  const getWeeksForPeriod = (startDate?: string, endDate?: string): number[] => {
-    if (!startDate || !endDate) return [];
-    return getCalendarWeeksInPeriod(new Date(startDate), new Date(endDate));
-  };
-
-  const getWeekRangesForPeriod = (startDate?: string, endDate?: string): { start: Date; end: Date }[] => {
-    if (!startDate || !endDate) return [];
-    const weeks = getWeeksForPeriod(startDate, endDate);
-    
-    return weeks.map(weekNumber => {
-      // Get the year from the start date
-      const year = new Date(startDate).getFullYear();
-      
-      // Calculate the date of the Monday for this week number
-      const yearStart = new Date(year, 0, 1);
-      const yearStartDay = yearStart.getDay();
-      const firstMondayOffset = yearStartDay === 0 ? -6 : 1 - yearStartDay;
-      const firstMonday = new Date(yearStart);
-      firstMonday.setDate(yearStart.getDate() + firstMondayOffset);
-      
-      // If first Monday is after January 4th, use last Monday of previous year
-      if (firstMonday.getDate() > 4) {
-        firstMonday.setDate(firstMonday.getDate() - 7);
-      }
-      
-      // Calculate the Monday of the target week + 1 week forward
-      const weekStart = new Date(firstMonday);
-      weekStart.setDate(firstMonday.getDate() + (weekNumber - 1) * 7 + 7); // +7 to shift 1 week forward
-      
-      // Calculate the Sunday of the same week (7 days total)
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6); // +6 for same week (Monday to Sunday)
-      
-      return { start: weekStart, end: weekEnd };
-    });
-  };
-
-  const isCurrentWeekInPeriod = (weekNumber: number): boolean => {
-    if (!startDate || !endDate) return false;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const now = new Date();
-    if (now < start || now > end) return false;
-    return weekNumber === getCurrentWeek();
-  };
-
   // Weekly monitoring handlers
   const handleWeeklyChange = (krId: string, week: number, value: number) => {
     setWeeklyValues(prev => ({
@@ -226,13 +144,13 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       
       // After successful save, reload monitoring data and update fact
       const res = await api.get(`/okr/keyresult/${krId}/monitoring`);
-      const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
+      const weeklyData = Object.fromEntries(res.data.map((e: WeeklyMonitoringEntry) => [e.weekNumber, e.value]));
       setWeeklyValues(prev => ({ ...prev, [krId]: weeklyData }));
       
       // Update fact based on formula
       const kr = goal.keyResults.find(k => k.id === krId);
       if (kr) {
-        const weekly = res.data.map((e: any) => ({ weekNumber: e.weekNumber, value: e.value }));
+        const weekly = res.data.map((e: WeeklyMonitoringEntry) => ({ weekNumber: e.weekNumber, value: e.value }));
         const newFact = calcFact(kr, weekly);
         
         // Update the KR with new fact
@@ -246,7 +164,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         base: kr.base,
         plan: kr.plan,
         formula: kr.formula,
-        fact: newFact,
         comment: kr.comment,
         });
       }
@@ -285,7 +202,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         const newWeeklyValues: { [krId: string]: { [week: number]: number | null } } = {};
         responses.forEach((res, index) => {
           const krId = goal.keyResults[index].id;
-          const weeklyData = Object.fromEntries(res.data.map((e: any) => [e.weekNumber, e.value]));
+          const weeklyData = Object.fromEntries(res.data.map((e: WeeklyMonitoringEntry) => [e.weekNumber, e.value]));
           newWeeklyValues[krId] = weeklyData;
         });
         
@@ -352,8 +269,8 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         weekly = Object.entries(weeklyValues[krId])
           .filter(([_, v]) => v !== null && v !== undefined)
           .map(([week, value]) => ({ weekNumber: parseInt(week, 10), value: Number(value) }));
-      } else if ((krData as any).weeklyMonitoring && (krData as any).weeklyMonitoring.length > 0) {
-        weekly = (krData as any).weeklyMonitoring.map((w: any) => ({ weekNumber: w.weekNumber, value: w.value }));
+      } else if (krData?.weeklyMonitoring && krData.weeklyMonitoring.length > 0) {
+        weekly = krData.weeklyMonitoring.map(w => ({ weekNumber: w.weekNumber, value: w.value }));
       }
       weekly.sort((a, b) => a.weekNumber - b.weekNumber);
       // Единый пересчёт факта через calcFact
@@ -372,7 +289,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
         base: krData?.base,
         plan: krData?.plan,
         formula: newFormula,
-        fact: newFact,
         comment: krData?.comment,
       });
       queryClient.invalidateQueries({ queryKey: ['okrs'] });
@@ -393,8 +309,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
   // Сохранять инициативу только на blur (или debounce), а не на каждый onChange
 
 
+type EditableValue = string | number;
+
   // Для KR: редактирование только локально, invalidateQueries только после onBlur (handleSaveCell)
-  const handleEditCell = (krId: string, field: keyof KeyResult, value: any) => {
+  const handleEditCell = (krId: string, field: keyof KeyResult, value: EditableValue) => {
     // Если редактируется формула, сразу пересчитываем fact и обновляем KR в UI
     if (field === 'formula') {
       const currentKR = goal.keyResults.find(k => k.id === krId);
@@ -424,11 +342,11 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       weekly.sort((a, b) => a.weekNumber - b.weekNumber);
       
       // Вычисляем новое значение факта
-      const newFact = calcFact({ ...currentKR, formula: value }, weekly);
+      const newFact = calcFact({ ...currentKR, formula: String(value) }, weekly);
       
       // Обновляем KR в goal.keyResults локально
       const newKeyResults = goal.keyResults.map(k => 
-        k.id === krId ? { ...k, formula: value, fact: newFact } : k
+        k.id === krId ? { ...k, formula: String(value), fact: newFact } : k
       );
       
       onGoalChange({ ...goal, keyResults: newKeyResults });
@@ -436,80 +354,20 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
     setEditKR({ krId, field });
     setEditValue(value);
   };
-  // Функция для расчёта fact по формуле (аналог calcFact на бэке), всегда сортирует weeklyMonitoring по weekNumber
-  const calcFact = (kr: any, weekly: { weekNumber: number, value: number }[]) => {
-    // Если нет недельных данных, возвращаем существующий fact (избегаем сброса в 0 при загрузке)
-    if (!weekly || !Array.isArray(weekly) || weekly.length === 0) {
-      return kr.fact || 0;
-    }
-    
-    // Фильтруем некорректные значения и сортируем по weekNumber
-    const sorted = weekly
-      .filter(w => w !== null && w !== undefined && typeof w.weekNumber === 'number' && typeof w.value === 'number')
-      .sort((a, b) => a.weekNumber - b.weekNumber);
-      
-    if (sorted.length === 0) return kr.fact || 0;
-      
-    const values = sorted.map(e => Number(e.value)).filter(v => !isNaN(v));
-    if (values.length === 0) return kr.fact || 0;
-    
-    const base = typeof kr.base === 'number' ? kr.base : 0;
-    let result;
-    switch ((kr.formula || '').toLowerCase()) {
-      case 'макс':
-        result = Math.max(...values);
-        break;
-      case 'среднее':
-        result = values.reduce((a, b) => a + b, 0) / values.length;
-        break;
-      case 'текущее':
-        result = sorted[sorted.length - 1].value; // последнее по неделе
-        break;
-      case 'мин':
-        result = Math.min(...values);
-        break;
-      case 'сумма':
-        result = values.reduce((a, b) => a + b, 0);
-        break;
-      case 'снижение':
-        // Для "Снижение" факт — это последнее (текущее) значение метрики
-        result = sorted[sorted.length - 1].value;
-        break;
-      case 'макс без базы':
-        result = Math.max(...values) - base;
-        break;
-      case 'среднее без базы':
-        result = values.reduce((a, b) => a + b, 0) / values.length - base;
-        break;
-      case 'текущее без базы':
-        result = sorted[sorted.length - 1].value - base;
-        break;
-      case 'минимум без базы':
-        result = Math.min(...values) - base;
-        break;
-      case 'сумма без базы':
-        result = values.reduce((a, b) => a + b, 0) - base;
-        break;
-      default:
-        result = 0;
-    }
-    // Округляем до 2 знаков после запятой
-    return Math.round(result * 100) / 100;
-  };
   // Обновлённый onSaveCell: выставляет loadingKRId на время запроса
-  const handleSaveCell = async (kr: KeyResult, field: keyof KeyResult, newValue?: any) => {
+  const handleSaveCell = async (kr: KeyResult, field: keyof KeyResult, newValue?: EditableValue) => {
     if (archived || readOnly) return;
     setEditKR(null);
     setLoadingKRId(kr.id);
     // Собираем обновленное значение поля
     let updatedKR: KeyResult = {
       ...kr,
-      [field]: newValue !== undefined ? newValue : editValue,
+      [field]: newValue !== undefined ? (newValue as string | number) : (editValue as string | number),
       formula: kr.formula || ''
     };
     const weekly = weeklyValues[kr.id] !== undefined
-      ? weeklyValues[kr.id]
-      : (kr as any).weeklyMonitoring ? (kr as any).weeklyMonitoring.map((w: any) => ({ weekNumber: w.weekNumber, value: w.value })) : [];
+      ? Object.entries(weeklyValues[kr.id] || {}).filter(([, v]) => v !== null && v !== undefined).map(([week, value]) => ({ weekNumber: Number(week), value: Number(value) }))
+      : kr.weeklyMonitoring ? kr.weeklyMonitoring.map(w => ({ weekNumber: w.weekNumber, value: w.value })) : [];
     if (field === 'formula' || field === 'base') {
       updatedKR.fact = calcFact(updatedKR, weekly);
     }
@@ -534,12 +392,11 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
       base: updatedKR.base,
       plan: updatedKR.plan,
       formula: updatedKR.formula,
-      fact: updatedKR.fact,
       comment: updatedKR.comment,
     });
     // После сохранения — повторно загружаем monitoring и обновляем KR
     const res = await api.get(`/okr/keyresult/${kr.id}/monitoring`);
-    const newWeekly = res.data.map((e: any) => ({ weekNumber: e.weekNumber, value: e.value }));
+    const newWeekly = res.data.map((e: WeeklyMonitoringEntry) => ({ weekNumber: e.weekNumber, value: e.value }));
     const newFact = calcFact(updatedKR, newWeekly);
     const newKeyResults = goal.keyResults.map(k => k.id === kr.id ? { ...k, ...updatedKR, fact: newFact } : k);
     onGoalChange({ ...goal, keyResults: newKeyResults });
@@ -677,21 +534,10 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
 
   // Calculate progress for a single KR with special handling for "Снижение"
   const getKrProgressPercent = (kr: KeyResult, factValue?: number | null): number => {
-    const formula = (kr.formula || '').toLowerCase();
     const fact = typeof factValue === 'number' ? factValue : typeof kr.fact === 'number' ? kr.fact : 0;
     const base = typeof kr.base === 'number' ? kr.base : 0;
     const plan = typeof kr.plan === 'number' ? kr.plan : 0;
-    const denom = plan - base;
-
-    if (denom === 0) return 0;
-
-    if (formula === 'снижение') {
-      const raw = ((base - fact) / denom) * 100;
-      return Math.max(0, Math.min(Math.round(raw), 100));
-    }
-
-    const raw = ((fact - base) / denom) * 100;
-    return Math.max(0, Math.min(Math.round(raw), 100));
+    return calcProgressPercent(base, plan, fact);
   };
 
   // Calculate average progress for the goal, ensuring it doesn't exceed 100%
@@ -860,9 +706,9 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
               tableLayout: 'auto'
             }}>
             <KeyResultTableHeader 
-              weeks={getWeeksForPeriod(startDate, endDate)}
+              weeks={startDate && endDate ? getCalendarWeeksInPeriod(new Date(startDate), new Date(endDate)) : []}
               weekRanges={getWeekRangesForPeriod(startDate, endDate)}
-              isCurrentWeek={isCurrentWeekInPeriod}
+              isCurrentWeek={(week) => week === getCurrentWeek()}
               showWeeklyMonitoring={false}
               keyResults={goal.keyResults}
             />
@@ -939,7 +785,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 height: isMobile ? 28 : 32,
                 fontFamily: 'Inter, Roboto, Arial, sans-serif',
               }}>
-                {getWeeksForPeriod(startDate, endDate).map((week, i) => {
+                {startDate && endDate ? getCalendarWeeksInPeriod(new Date(startDate), new Date(endDate)).map((week, i) => {
                   const weekRanges = getWeekRangesForPeriod(startDate, endDate);
                   let totalProgress = 0;
                   let validKRs = 0;
@@ -956,7 +802,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                   });
                   
                   const avgProgress = validKRs > 0 ? Math.round(totalProgress / validKRs) : 0;
-                  const isCurrent = isCurrentWeekInPeriod(week);
+                  const isCurrent = week === getCurrentWeek();
                   
                   let progressColor = '#dc2626';
                   if (avgProgress >= 100) {
@@ -964,7 +810,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                   } else if (avgProgress >= 50) {
                     progressColor = '#d97706';
                   }
-
+                  
                   return (
                     <th key={week} style={{
                       minWidth: isMobile ? 32 : 36,
@@ -1016,17 +862,15 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       </Tooltip>
                     </th>
                   );
-                })}
+                }) : null}
               </tr>
             </thead>
             <tbody>
               {goal.keyResults.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((kr) => (
                 <tr key={kr.id} style={{ height: isMobile ? 48 : (rowHeights[kr.id] ?? 44) }}>
-                  {getWeeksForPeriod(startDate, endDate).map(week => (
-                    <td key={week} style={{
-                      width: isMobile ? '40px' : '48px',
-                      minWidth: isMobile ? '40px' : '48px',
-                      maxWidth: 'none',
+                  {startDate && endDate ? getCalendarWeeksInPeriod(new Date(startDate), new Date(endDate)).map(week => {
+                    const isEditing = weeklyEdit[kr.id]?.[week];
+                    const tdStyle: React.CSSProperties = {
                       padding: isMobile ? '8px 4px' : '12px 8px',
                       fontSize: isMobile ? 12 : 15,
                       color: '#1a202c',
@@ -1036,46 +880,55 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                       whiteSpace: 'normal',
                       verticalAlign: 'middle',
                       minHeight: isMobile ? 28 : 32,
-                      transition: 'background 0.2s, color 0.2s'
-                    }}>
+                      transition: 'background 0.2s, color 0.2s',
+                      ...(isEditing
+                        ? { width: 'auto', minWidth: 80 }
+                        : { width: isMobile ? '40px' : '48px', minWidth: isMobile ? '40px' : '48px' })
+                    };
+                    return (
+                    <td key={week} style={tdStyle}>
                       {weeklyLoading[kr.id] ? (
                         <CircularProgress size={16} />
                       ) : weeklyEdit[kr.id]?.[week] ? (
-                        <TextField
-                          size="small"
-                          type="number"
-                          value={weeklyValues[kr.id]?.[week] ?? ''}
-                          onChange={e => {
-                const val = e.target.value.replace(',', '.');
-                handleWeeklyChange(kr.id, week, Number(val));
-              }}
-                          onBlur={() => handleWeeklySave(kr.id, week)}
-                          autoFocus
-                          sx={{ 
-                            minWidth: isMobile ? 30 : 34, 
-                            width: 'auto',
-                            fontSize: isMobile ? 11 : 12, 
-                            background: '#fff', 
-                            borderRadius: 1, 
-                            boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)',
-                            '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
-                              WebkitAppearance: 'none',
-                              margin: 0,
-                            },
-                            '& input[type=number]': {
-                              MozAppearance: 'textfield',
-                            },
-                          }}
-                          inputProps={{ 
-                            style: { 
-                              textAlign: 'center', 
-                              fontSize: isMobile ? 12 : 14, 
-                              padding: isMobile ? 1 : 2,
-                              width: 'auto',
-                              minWidth: isMobile ? 26 : 30
-                            } 
-                          }}
-                        />
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={weeklyValues[kr.id]?.[week] ?? ''}
+                            onChange={e => {
+                              const val = e.target.value.replace(',', '.');
+                              handleWeeklyChange(kr.id, week, Number(val));
+                            }}
+                            onBlur={() => handleWeeklySave(kr.id, week)}
+                            autoFocus
+                            sx={{ 
+                              width: '100%',
+                              minWidth: 80,
+                              fontSize: isMobile ? 11 : 12, 
+                              background: '#fff', 
+                              borderRadius: 1, 
+                              boxShadow: '0 1px 4px 0 rgba(0,0,0,0.04)',
+                              '& .MuiInputBase-root': {
+                                height: isMobile ? 28 : 32,
+                                padding: 0,
+                              },
+                              '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': {
+                                WebkitAppearance: 'none',
+                                margin: 0,
+                              },
+                              '& input[type=number]': {
+                                MozAppearance: 'textfield',
+                              },
+                            }}
+                            inputProps={{ 
+                              style: { 
+                                textAlign: 'center', 
+                                fontSize: isMobile ? 12 : 14, 
+                                padding: isMobile ? 1 : 2,
+                                width: '100%',
+                                minWidth: 0,
+                              } 
+                            }}
+                          />
                       ) : (
                         <Box
                           onClick={() => !readOnly && handleWeeklyEdit(kr.id, week)}
@@ -1087,9 +940,9 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                             fontSize: isMobile ? 9 : 10,
                             lineHeight: 1.1,
                             borderRadius: 1,
-                            border: isCurrentWeekInPeriod(week) ? '1px solid #111' : '1px solid #e0e0e0',
-                            color: isCurrentWeekInPeriod(week) ? '#111' : '#444',
-                            background: isCurrentWeekInPeriod(week) ? '#f3f4f6' : '#fff',
+                            border: week === getCurrentWeek() ? '1px solid #111' : '1px solid #e0e0e0',
+                            color: week === getCurrentWeek() ? '#111' : '#444',
+                            background: week === getCurrentWeek() ? '#f3f4f6' : '#fff',
                             boxShadow: 'none',
                             transition: 'all 0.15s',
                             cursor: readOnly ? 'default' : 'pointer',
@@ -1106,8 +959,9 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                           {formatWeeklyValue(weeklyValues[kr.id]?.[week] ?? null)}
                         </Box>
                       )}
-                    </td>
-                  ))}
+                     </td>
+                   );
+                 }) : null}
                 </tr>
               ))}
             </tbody>
@@ -1165,7 +1019,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 },
               }}
               onClick={handleViewAnchorClick}
-              dangerouslySetInnerHTML={{ __html: firstKr.comment || '<span style="color:#94a3b8">Нет инициатив</span>' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(firstKr.comment || '<span style="color:#94a3b8">Нет инициатив</span>') }}
             />
           </Box>
         );
@@ -1192,7 +1046,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           '& p': { m: 0 },
         }}
         onClick={handleViewAnchorClick}
-        dangerouslySetInnerHTML={{ __html: (goal.keyResults.find(k => k.id === commentViewKrId)?.comment) || '' }} />
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml((goal.keyResults.find(k => k.id === commentViewKrId)?.comment) || '') }} />
       </DialogContent>
       <DialogActions>
         <Button onClick={() => setCommentViewKrId(null)}>Закрыть</Button>
@@ -1247,7 +1101,7 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
           </Tooltip>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, ml: 1 }}>
             <FormatColorText fontSize="small" />
-            <input type="color" onChange={(e) => document.execCommand('foreColor', false, e.target.value)} style={{ width: 24, height: 24, border: 'none', background: 'transparent', padding: 0 }} />
+            <input type="color" onChange={(e) => { const v = e.target.value; if (isValidHexColor(v)) document.execCommand('foreColor', false, v); }} style={{ width: 24, height: 24, border: 'none', background: 'transparent', padding: 0 }} />
           </Box>
                   </Box>
         <Box
@@ -1309,7 +1163,6 @@ const GoalItem: React.FC<GoalItemProps> = ({ goal, okrId, onGoalChange, onAddKR,
                 base: kr.base,
                 plan: kr.plan,
                 formula: kr.formula,
-                fact: kr.fact,
                 comment: commentHtml,
               });
               const newKeyResults = goal.keyResults.map(k => k.id === kr.id ? { ...k, comment: commentHtml } : k);

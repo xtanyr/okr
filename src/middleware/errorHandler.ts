@@ -1,16 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+interface HttpError extends Error {
+  status?: number;
+}
+
+export const errorHandler = (err: HttpError, req: Request, res: Response, next: NextFunction) => {
   console.error(err.stack);
   
-  // Default error status and message
   const status = err.status || 500;
   const message = err.message || 'Internal Server Error';
   
-  // Send error response
   res.status(status).json({
     error: {
-      message: message,
+      message,
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     }
   });

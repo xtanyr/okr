@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import { useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,8 +36,8 @@ export default function Login() {
       login(res.data.user, res.data.token);
       toast.success('Вход выполнен успешно!');
       navigate('/');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Неверный email или пароль';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof AxiosError ? error.response?.data?.error || error.message : 'Неверный email или пароль';
       setLoginError(errorMessage);
       toast.error(errorMessage);
     } finally {

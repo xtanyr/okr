@@ -68,8 +68,6 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         ':root': {
-          '&.css-1bzq6gc': {
-            padding: 0},
           '--background': COLORS.background,
           '--foreground': COLORS.foreground,
           '--card': COLORS.card,

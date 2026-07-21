@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import styles from './Login.module.css';
@@ -40,8 +41,8 @@ export default function ResetPassword() {
       
       toast.success('Пароль успешно изменен!');
       navigate('/login');
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || 'Произошла ошибка. Пожалуйста, попробуйте снова.';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof AxiosError ? error.response?.data?.error || error.message : 'Произошла ошибка. Пожалуйста, попробуйте снова.';
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

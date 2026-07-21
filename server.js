@@ -6,7 +6,13 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+// Production topology:
+// 1. Run backend API server: node dist/index.js  (default port 4001 via BACKEND_PORT)
+// 2. Run this proxy on the public port (default 4000):
+//    - /auth, /user, /okr, /health → backend
+//    - everything else → frontend/dist
+// start-simple.ts is a dev convenience that runs both backend + frontend in one process.
+// In production, prefer server.js + a separate backend process.
 
 // === Configuration ===
 const PORT = process.env.PORT || 4000;                    // Public port (what your reverse proxy / panel should point to)

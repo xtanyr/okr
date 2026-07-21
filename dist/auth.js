@@ -1,27 +1,46 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const client_1 = require("@prisma/client");
-const bcrypt_1 = __importDefault(require("bcrypt"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const crypto_1 = __importDefault(require("crypto"));
-const email_1 = require("./email");
-const prisma = new client_1.PrismaClient();
-const router = (0, express_1.Router)();
+import { Router } from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { sendPasswordResetEmail } from './email.js';
+const prisma = new PrismaClient();
+const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 const REGISTRATION_CODE = process.env.REGISTRATION_CODE || 'okr2025';
+function isLocalHostname(hostname) {
+    const normalized = hostname.toLowerCase();
+    return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+}
+function normalizeNonLocalUrl(url) {
+    try {
+        const parsed = new URL(url);
+        if (isLocalHostname(parsed.hostname)) {
+            return null;
+        }
+        return url.replace(/\/+$/, '');
+    }
+    catch {
+        return null;
+    }
+}
+function getFrontendBaseUrl(req) {
+    const configuredUrl = process.env.FRONTEND_URL;
+    if (configuredUrl) {
+        const normalizedConfiguredUrl = normalizeNonLocalUrl(configuredUrl);
+        if (normalizedConfiguredUrl) {
+            return normalizedConfiguredUrl;
+        }
+    }
+    const origin = req.get('origin');
+    if (origin) {
+        const normalizedOrigin = normalizeNonLocalUrl(origin);
+        if (normalizedOrigin) {
+            return normalizedOrigin;
+        }
+    }
+    return 'https://okr.scr-tech.ru';
+}
 // Генерация аватарки: первые две буквы имени + случайный фон (цвет)
 function generateAvatar(name) {
     const initials = name.slice(0, 2).toUpperCase();
@@ -30,7 +49,7 @@ function generateAvatar(name) {
     return { initials, color };
 }
 // Регистрация
-router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/register', async (req, res) => {
     const { email, password, passwordConfirm, firstName, lastName, codeWord } = req.body;
     if (!email || !password || !passwordConfirm || !firstName || !lastName || !codeWord) {
         return res.status(400).json({ error: 'Все поля обязательны' });
@@ -41,12 +60,12 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
     if (password !== passwordConfirm) {
         return res.status(400).json({ error: 'Пароли не совпадают' });
     }
-    const existing = yield prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
         return res.status(400).json({ error: 'Пользователь с таким email уже существует' });
     }
-    const hash = yield bcrypt_1.default.hash(password, 10);
-    const user = yield prisma.user.create({
+    const hash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
         data: {
             email,
             password: hash,
@@ -56,43 +75,44 @@ router.post('/register', (req, res) => __awaiter(void 0, void 0, void 0, functio
         },
     });
     const avatar = generateAvatar(firstName);
-    const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, email: user.email, firstName, lastName, role: user.role, avatar } });
-}));
+});
 // Логин
-router.post('/login', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ error: 'Email и пароль обязательны' });
     }
-    const user = yield prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
         return res.status(400).json({ error: 'Неверный email или пароль' });
     }
-    const valid = yield bcrypt_1.default.compare(password, user.password);
+    const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
         return res.status(400).json({ error: 'Неверный email или пароль' });
     }
     const avatar = generateAvatar(user.firstName);
-    const token = jsonwebtoken_1.default.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatar } });
-}));
+});
 // Password reset request
-router.post('/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
+    const successMessage = 'If an account with that email exists, a password reset link has been sent.';
     if (!email) {
         return res.status(400).json({ error: 'Email is required' });
     }
     try {
-        const user = yield prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { email } });
         // Always return success to prevent email enumeration
         if (!user) {
-            return res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+            return res.json({ message: successMessage });
         }
         // Generate reset token (valid for 1 hour)
-        const resetToken = crypto_1.default.randomBytes(32).toString('hex');
+        const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
-        yield prisma.user.update({
+        await prisma.user.update({
             where: { email },
             data: {
                 resetToken,
@@ -100,17 +120,24 @@ router.post('/forgot-password', (req, res) => __awaiter(void 0, void 0, void 0, 
             },
         });
         // Send email with reset link
-        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}reset-password?token=${resetToken}`;
-        yield (0, email_1.sendPasswordResetEmail)(email, resetUrl);
-        res.json({ message: 'If an account with that email exists, a password reset link has been sent.' });
+        const requestOrigin = req.get('origin');
+        const frontendBaseUrl = getFrontendBaseUrl(req);
+        const resetUrl = `${frontendBaseUrl}/reset-password?token=${resetToken}`;
+        try {
+            await sendPasswordResetEmail(email, resetUrl);
+        }
+        catch (mailError) {
+            console.error('Password reset email send failed:', mailError);
+        }
+        res.json({ message: successMessage });
     }
     catch (error) {
         console.error('Password reset error:', error);
-        res.status(500).json({ error: 'Error processing password reset request' });
+        res.json({ message: successMessage });
     }
-}));
+});
 // Reset password
-router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.post('/reset-password', async (req, res) => {
     const { token, password, passwordConfirm } = req.body;
     if (!token) {
         return res.status(400).json({ error: 'Token is required' });
@@ -123,7 +150,7 @@ router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, f
     }
     try {
         // Find user by reset token and check if it's still valid
-        const user = yield prisma.user.findFirst({
+        const user = await prisma.user.findFirst({
             where: {
                 resetToken: token,
                 resetTokenExpiry: {
@@ -135,8 +162,8 @@ router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(400).json({ error: 'Invalid or expired token' });
         }
         // Update password and clear reset token
-        const hashedPassword = yield bcrypt_1.default.hash(password, 10);
-        yield prisma.user.update({
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await prisma.user.update({
             where: { id: user.id },
             data: {
                 password: hashedPassword,
@@ -150,5 +177,60 @@ router.post('/reset-password', (req, res) => __awaiter(void 0, void 0, void 0, f
         console.error('Password reset error:', error);
         res.status(500).json({ error: 'Error resetting password' });
     }
-}));
-exports.default = router;
+});
+// Token refresh endpoint
+router.post('/refresh-token', async (req, res) => {
+    const { token } = req.body;
+    if (!token) {
+        return res.status(400).json({ error: 'Token is required' });
+    }
+    try {
+        // Verify token (allow expired tokens for refresh within grace period)
+        let payload = null;
+        try {
+            payload = jwt.verify(token, JWT_SECRET);
+        }
+        catch (error) {
+            // If token is expired, try to decode it anyway (for refresh grace period)
+            if (error instanceof Error && error.name === 'TokenExpiredError') {
+                const decoded = jwt.decode(token);
+                if (decoded && decoded.userId) {
+                    payload = decoded;
+                }
+                else {
+                    return res.status(401).json({ error: 'Invalid token' });
+                }
+            }
+            else {
+                return res.status(401).json({ error: 'Invalid token' });
+            }
+        }
+        // Get user to ensure they still exist and get latest role
+        const user = await prisma.user.findUnique({
+            where: { id: payload.userId },
+            select: { id: true, email: true, firstName: true, lastName: true, role: true }
+        });
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+        // Generate new token with extended expiration
+        const avatar = generateAvatar(user.firstName);
+        const newToken = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({
+            token: newToken,
+            user: {
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                role: user.role,
+                avatar
+            }
+        });
+    }
+    catch (error) {
+        console.error('Token refresh error:', error);
+        res.status(500).json({ error: 'Error refreshing token' });
+    }
+});
+export default router;

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress, ListSubheader } from '@mui/material';
+import { Box, Select, MenuItem, Typography, FormControl, InputLabel, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, ToggleButtonGroup, ToggleButton, Menu, ListItemIcon, ListItemText, Divider, IconButton, CircularProgress } from '@mui/material';
 import UserAvatar from './UserAvatar';
 import { useState, useRef, useMemo } from 'react';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import ArchiveIcon from '@mui/icons-material/Archive';
 import UnarchiveIcon from '@mui/icons-material/Unarchive';
@@ -85,9 +86,9 @@ const OkrHeader: React.FC<OkrHeaderProps> = ({
       if (typeof onOkrCreated === 'function') onOkrCreated();
       
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Ошибка при создании OKR:', error);
-      if (error.response?.data?.error) {
+      if (error instanceof AxiosError && error.response?.data?.error) {
         setError(error.response.data.error);
       } else {
         setError('Произошла ошибка при создании OKR');

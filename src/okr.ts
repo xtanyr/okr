@@ -1,60 +1,50 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from './middleware.js';
+import { calcFact } from './utils/okr.js';
 
 const prisma = new PrismaClient();
 const router = Router();
 
-// Вспомогательная функция для расчёта 'факт' по формуле
-function calcFact(kr: any) {
-  const weekly = (kr.weeklyMonitoring || []) as { weekNumber: number; value: number }[];
-  if (!weekly.length) return 0;
+interface OkrWithRelations {
+  id: string;
+  userId: string;
+  period: string;
+  archived: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  goals: GoalWithRelations[];
+}
 
-  const sorted = weekly.slice().sort((a, b) => a.weekNumber - b.weekNumber);
-  const values = sorted.map(w => w.value as number);
-  const base = typeof kr.base === 'number' ? kr.base : 0;
+interface GoalWithRelations {
+  id: string;
+  okrId: string;
+  title: string;
+  keyInitiatives: string;
+  order: number;
+  keyResults: KeyResultWithRelations[];
+}
 
-  let result;
-  switch ((kr.formula || '').toLowerCase()) {
-    case 'макс':
-      result = Math.max(...values);
-      break;
-    case 'среднее':
-      result = values.reduce((a: number, b: number) => a + b, 0) / values.length;
-      break;
-    case 'текущее':
-      result = sorted[sorted.length - 1].value;
-      break;
-    case 'мин':
-      result = Math.min(...values);
-      break;
-    case 'сумма':
-      result = values.reduce((a: number, b: number) => a + b, 0);
-      break;
-    case 'снижение':
-      // Для "Снижение" факт — это последнее (текущее) значение метрики
-      result = sorted[sorted.length - 1].value;
-      break;
-    case 'макс без базы':
-      result = Math.max(...values) - base;
-      break;
-    case 'среднее без базы':
-      result = values.reduce((a: number, b: number) => a + b, 0) / values.length - base;
-      break;
-    case 'текущее без базы':
-      result = sorted[sorted.length - 1].value - base;
-      break;
-    case 'минимум без базы':
-      result = Math.min(...values) - base;
-      break;
-    case 'сумма без базы':
-      result = values.reduce((a: number, b: number) => a + b, 0) - base;
-      break;
-    default:
-      result = Math.max(...values); // по умолчанию макс
-  }
-  // Округляем до 2 знаков после запятой
-  return Math.round(result * 100) / 100;
+interface KeyResultCreateData {
+  title: string;
+  metric: string;
+  base: number;
+  plan: number;
+  formula: string;
+  order: number;
+}
+
+interface KeyResultWithRelations {
+  id: string;
+  goalId: string;
+  title: string;
+  metric: string;
+  base: number;
+  plan: number;
+  formula: string;
+  order: number;
+  comment?: string | null;
+  weeklyMonitoring: { id: string; keyResultId: string; weekNumber: number; value: number }[];
 }
 
 // Получить все OKR текущего пользователя
@@ -76,11 +66,11 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     },
   });
   // Добавляем вычисление 'факт' для каждого KR
-  const okrsWithFact = okrs.map((okr: any) => ({
+  const okrsWithFact = okrs.map((okr: OkrWithRelations) => ({
     ...okr,
-    goals: okr.goals.map((goal: any) => ({
+    goals: okr.goals.map((goal: GoalWithRelations) => ({
       ...goal,
-      keyResults: goal.keyResults.map((kr: any) => ({
+      keyResults: goal.keyResults.map((kr: KeyResultWithRelations) => ({
         ...kr,
         fact: calcFact(kr),
       })),
@@ -175,23 +165,22 @@ router.post('/:id/duplicate', requireAuth, async (req: AuthRequest, res) => {
       period: okr.period + ' (копия)',
       archived: false,
       goals: {
-        create: okr.goals.map((goal: any) => ({
+        create: okr.goals.map((goal: any, idx: number) => ({
           title: goal.title,
           keyInitiatives: goal.keyInitiatives,
+          order: idx,
           keyResults: {
-            create: goal.keyResults.map((kr: any) => ({
+            create: goal.keyResults.map((kr: any, idx: number) => ({
               title: kr.title,
               metric: kr.metric,
               base: kr.base,
               plan: kr.plan,
               formula: kr.formula,
+              order: idx,
             })),
           },
         })),
       },
-    },
-    include: {
-      goals: { include: { keyResults: true } },
     },
   });
   res.status(201).json(newOKR);
@@ -401,13 +390,13 @@ router.get('/user/:userId', requireAuth, async (req: AuthRequest, res) => {
     },
   });
   // Добавляем вычисление 'факт' для каждого KR и возвращаем startDate/endDate
-  const okrsWithFact = okrs.map((okr: any) => ({
+  const okrsWithFact = okrs.map((okr: OkrWithRelations) => ({
     ...okr,
     startDate: okr.startDate,
     endDate: okr.endDate,
-    goals: okr.goals.map((goal: any) => ({
+    goals: okr.goals.map((goal: GoalWithRelations) => ({
       ...goal,
-      keyResults: goal.keyResults.map((kr: any) => ({
+      keyResults: goal.keyResults.map((kr: KeyResultWithRelations) => ({
         ...kr,
         fact: calcFact(kr),
       })),

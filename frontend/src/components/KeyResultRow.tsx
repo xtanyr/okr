@@ -4,6 +4,9 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 import type { KeyResult } from '../types';
+import { calcProgressPercent } from '../utils/progress';
+
+type EditableValue = string | number;
 
 interface KeyResultRowProps {
   kr: KeyResult & { formula?: string; comment?: string };
@@ -11,11 +14,11 @@ interface KeyResultRowProps {
   editKR: { krId: string; field: keyof KeyResult } | null;
   editValue: string | number | null;
   archived: boolean;
-  onEditCell: (krId: string, field: keyof KeyResult, value: any) => void;
-  onSaveCell: (kr: KeyResult, field: keyof KeyResult, newValue?: any) => void;
+  onEditCell: (krId: string, field: keyof KeyResult, value: EditableValue) => void;
+  onSaveCell: (kr: KeyResult, field: keyof KeyResult, newValue?: EditableValue) => void;
   onDuplicateKR: (krId: string) => void;
   onDeleteKR: (krId: string) => void;
-  setEditValue: (v: any) => void;
+  setEditValue: (v: EditableValue | null) => void;
   loading?: boolean;
   readOnly?: boolean; // режим только для просмотра
   // Weekly monitoring props
@@ -184,23 +187,11 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  // Calculate progress percentage with special handling for "Снижение"
-  let percent = 0;
-  const formula = (kr.formula || '').toLowerCase();
+  // Calculate progress percentage using shared utility
   const base = typeof kr.base === 'number' ? kr.base : 0;
   const plan = typeof kr.plan === 'number' ? kr.plan : 0;
   const fact = typeof kr.fact === 'number' ? kr.fact : 0;
-  const denom = plan - base;
-  
-  if (denom === 0) {
-    percent = 0;
-  } else if (formula === 'снижение') {
-    const raw = ((base - fact) / denom) * 100;
-    percent = Math.max(0, Math.min(Math.round(raw), 100));
-  } else {
-    const raw = ((fact - base) / denom) * 100;
-    percent = Math.max(0, Math.min(Math.round(raw), 100));
-  }
+  const percent = calcProgressPercent(base, plan, fact);
 
   // Адаптивные стили для мобильных устройств
   const adaptiveStyles = {
@@ -306,12 +297,13 @@ const KeyResultRow: React.FC<KeyResultRowProps> = React.memo(({ kr, index, editK
   }, [editKR, kr.id]);
 
   // Универсальный обработчик изменения
-  const handleChange = (_field: keyof KeyResult, value: any) => {
+  const handleChange = (_field: keyof KeyResult, value: EditableValue) => {
     setLocalValue(value);
     setEditValue(value);
   };
+
   // Универсальный обработчик сохранения
-  const handleSave = async (field: keyof KeyResult, value?: any) => {
+  const handleSave = async (field: keyof KeyResult, value?: EditableValue) => {
     setLoadingField(field);
     await onSaveCell(kr, field, value);
     setLoadingField(null);

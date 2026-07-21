@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, AuthRequest } from './middleware.js';
 import bcrypt from 'bcrypt';
+import { Response, NextFunction } from 'express';
 
 const prisma = new PrismaClient();
 const router = Router();
 
 // Middleware для проверки роли admin
-function requireAdmin(req: AuthRequest, res: any, next: any) {
+function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
   if (!req.user || req.user.role !== 'ADMIN') {
     return res.status(403).json({ error: 'Требуется роль администратора' });
   }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { AxiosError } from 'axios';
 import { useUserStore } from '../store/userStore';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -54,12 +55,12 @@ export default function Register() {
       login(response.data.user, response.data.token);
       toast.success('Регистрация прошла успешно!');
       navigate('/');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       let errorMessage = 'Произошла ошибка при регистрации';
       
-      if (error.response) {
-        const responseData = error.response.data || {};
+      if (error instanceof AxiosError) {
+        const responseData = error.response?.data || {};
         
         console.log('Error response data:', responseData);
         
@@ -69,17 +70,17 @@ export default function Register() {
           errorMessage = responseData.error;
         } else if (responseData.message) {
           errorMessage = responseData.message;
-        } else if (error.response.statusText) {
+        } else if (error.response?.statusText) {
           errorMessage = error.response.statusText;
         } else if (error.message) {
           errorMessage = error.message;
         }
-      } else if (error.request) {
+      } else if (error instanceof AxiosError && error.request) {
         console.error('No response received:', error.request);
         errorMessage = 'Нет ответа от сервера. Проверьте подключение к интернету.';
       } else {
-        console.error('Request setup error:', error.message);
-        errorMessage = error.message || 'Ошибка при настройке запроса';
+        console.error('Request setup error:', error instanceof Error ? error.message : String(error));
+        errorMessage = error instanceof Error ? error.message : 'Ошибка при настройке запроса';
       }
       
       setFormError(errorMessage || 'Произошла ошибка при регистрации');

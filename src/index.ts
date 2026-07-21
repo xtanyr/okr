@@ -9,6 +9,12 @@ import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// Backend-only entry point.
+// Production topology:
+//   - server.js (public port) → proxies API to this process + serves built frontend
+//   - This process: API server only (default BACKEND_PORT=4000)
+// Dev alternative: start-simple.ts runs backend + frontend static server together.
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -42,7 +48,10 @@ app.use('/user', userRouter);
 app.use('/okr', okrRouter);
 
 // ErrorHandler middleware
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+interface HttpError extends Error {
+  status?: number;
+}
+app.use((err: HttpError, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
   res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
 });

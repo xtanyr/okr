@@ -5,39 +5,45 @@ dotenv.config();
 
 // Create a test account for development if no SMTP settings are provided
 let transporter: nodemailer.Transporter | undefined;
+let initPromise: Promise<nodemailer.Transporter> | null = null;
 
 async function initTransporter() {
   if (transporter) return transporter;
+  if (!initPromise) {
+    initPromise = (async () => {
+      if (process.env.NODE_ENV === 'production' || (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)) {
+        // Use real SMTP in production or when SMTP settings are provided
+        transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.yandex.ru',
+          port: parseInt(process.env.SMTP_PORT || '465'),
+          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+        console.log('Using real SMTP email service');
+      } else {
+        // Fallback to ethereal.email for development
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+        console.log('Using Ethereal test email service');
+        console.log('Ethereal test account created:', testAccount);
+      }
 
-  if (process.env.NODE_ENV === 'production' || (process.env.SMTP_HOST && process.env.SMTP_PORT && process.env.SMTP_USER && process.env.SMTP_PASS)) {
-    // Use real SMTP in production or when SMTP settings are provided
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.yandex.ru',
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-    console.log('Using real SMTP email service');
-  } else {
-    // Fallback to ethereal.email for development
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log('Using Ethereal test email service');
-    console.log('Ethereal test account created:', testAccount);
+      return transporter;
+    })();
   }
 
-  return transporter;
+  return initPromise;
 }
 
 // Function to send password reset email
